@@ -1,0 +1,9 @@
+db/pubcam.db
+logs/*.json
+__pycache__/
+*.pyc
+inbox/*.csv
+reports/*.md
+reports/*.csv
+!reports/.gitkeep
+!inbox/.gitkeep

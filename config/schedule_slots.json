@@ -1,0 +1,12 @@
+{
+  "_comment": "PLACEHOLDER — confirm actual posting days/times and format ratio with the user, then update CLAUDE.md Section 4 (What works) to match. See CLAUDE.md Section 6.",
+  "recurring_slots": [
+    { "day": "Tuesday", "time": "18:00" },
+    { "day": "Thursday", "time": "18:00" },
+    { "day": "Saturday", "time": "12:00" }
+  ],
+  "default_format_ratio": {
+    "carousel": 2,
+    "reel": 1
+  }
+}
