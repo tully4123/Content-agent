@@ -2,6 +2,37 @@
 
 Terminal-based content tracker + strategy agent for PubCam, driven by Claude Code.
 
+## What this is
+
+[PubCam](https://www.instagram.com/pubcam.au/) is a nightlife media brand in
+Wollongong, Australia that runs collab content with local venue partners. This
+repo is its content operations system: instead of a web app or SaaS tool, the
+whole thing is a local folder that Claude Code operates as an agent — a SQLite
+database, a set of Python scripts, and Claude Code skills/commands that wire
+them into workflows.
+
+What it does:
+
+- **Scores every Instagram post** using PubCam's weighted engagement model
+  (shares and new follows count most, likes least; score = weighted engagement
+  ÷ reach, percentile-ranked against all post history). Feed it a Meta
+  Business Suite CSV export and it flags what's working and what to retire.
+- **Keeps an ideas backlog** — spotted a good reel format elsewhere? `/capture`
+  logs it. Performance insights and trend research feed the same backlog.
+- **Builds the weekly posting schedule** from approved ideas, respecting venue
+  mix and format ratio, with a human approving every step — the agent proposes,
+  a person posts.
+- **Writes performance reports** that check results against the brand's
+  running strategy assumptions and propose updates when the data disagrees.
+- **Syncs the schedule to Google Drive** so the rest of the team sees it
+  without touching a terminal.
+
+The design principle: Claude Code *is* the agent, and the repo is its brain.
+[CLAUDE.md](CLAUDE.md) holds the brand context, scoring model, and hard rules
+(e.g. never state a venue price or event detail without a verified source);
+the skills in [.claude/skills/](.claude/skills/) define the workflows; SQLite
+holds the state. No hosting, no server — it runs on a laptop.
+
 Start here: [CLAUDE.md](CLAUDE.md) — the agent's brain (brand voice, venues,
 scoring model, rules, workflow definitions).
 
