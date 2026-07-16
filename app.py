@@ -279,6 +279,123 @@ def page_strategy() -> None:
         st.dataframe(log, width="stretch", hide_index=True)
 
 
+# ---------------------------------------------------------------- Help
+
+def page_help() -> None:
+    st.title("How to use this app")
+
+    st.markdown(
+        """
+This app is the point-and-click side of the PubCam content agent. It shares one
+database with the Claude Code agent (the terminal side), so anything you do here
+— approving an idea, scoring a CSV — the agent sees instantly, and vice versa.
+
+**The split:** the app is for checking numbers and making decisions;
+the agent (Claude Code opened in this folder) is for thinking work —
+planning the week, writing reports, researching trends.
+"""
+    )
+
+    st.subheader("Your weekly routine")
+    st.markdown(
+        """
+| When | What | Where |
+|---|---|---|
+| **Friday** | Export the post CSV from Meta Business Suite → drag it into **Score posts** → click Score | This app |
+| **Friday** | Ask for `/report` — how the week did vs. strategy | Claude Code |
+| **Anytime** | Spotted a good post idea? Log it in **Ideas** (30 seconds) | This app |
+| **Monday** | Approve/kill backlog ideas in **Ideas** | This app |
+| **Monday** | Run `/plan-week` — the agent proposes the schedule from your approved ideas | Claude Code |
+| **Through the week** | Post as scheduled, then **Mark posted** in Schedule | You + this app |
+"""
+    )
+
+    st.subheader("What each page does")
+    with st.expander("Dashboard — how did our content perform?"):
+        st.markdown(
+            """
+- Headline numbers, average score per format, and every scored post ranked.
+- Only **pubcam.au** posts get scores. Posts from partner accounts (Heyday,
+  Illawarra handles) appear under *Excluded posts* with raw numbers only —
+  their insights are limited, so scoring them would be comparing apples to
+  oranges.
+- Use the rating filter to see just the A+ posts (steal from your own
+  winners) or just the Ds (spot what to stop doing).
+"""
+        )
+    with st.expander("Score posts — feed in fresh numbers"):
+        st.markdown(
+            """
+1. In Meta Business Suite: **Insights → Content → Export → CSV** (pick your
+   date range).
+2. Drag the downloaded file into the upload box.
+3. Click **Score newest CSV**. Posts are scored, ranked, and appear on the
+   Dashboard immediately.
+
+Re-scoring the same file is safe — posts update in place, no duplicates.
+Posts younger than 7 days are held back so scores compare fairly.
+"""
+        )
+    with st.expander("Ideas — the backlog that feeds everything"):
+        st.markdown(
+            """
+- Capture anything worth trying: a format you saw elsewhere, a venue moment
+  coming up, a spin on a past winner. More captures = better weeks.
+- **Approve** moves an idea into the pool `/plan-week` draws from.
+  **Kill** archives it. Nothing gets scheduled without your approval.
+- If an idea depends on a price or event detail, write that in the notes —
+  it must be fact-checked before the post ships. The agent enforces this.
+"""
+        )
+    with st.expander("Schedule — what's going out and when"):
+        st.markdown(
+            """
+- Shows the week the agent proposed and you confirmed via `/plan-week`.
+- After you publish a post on Instagram, use **Mark posted** here so the
+  system knows the slot is done.
+- Want the team to see it? Ask the agent to `/sync-drive` — it pushes the
+  schedule to Google Drive for Jack and Dakota.
+"""
+        )
+    with st.expander("Strategy log — what we believe and why"):
+        st.markdown(
+            """
+- The running record of strategy decisions ("carousels over reels 2:1",
+  etc.) with the evidence behind each one.
+- Entries **require evidence** — a number, a query, a report finding. The
+  form will refuse a hunch. This is what keeps the agent's advice honest.
+"""
+        )
+
+    st.subheader("What the numbers mean")
+    st.markdown(
+        """
+| Term | Meaning |
+|---|---|
+| **Weighted score** | Engagement where actions are weighted by value — a share (×5) or new follow (×6) is worth far more than a like (×1) — divided by reach. Measures how hard the post worked *per person who saw it*. |
+| **Percentile** | Where the post ranks against all scored PubCam posts. 90 = beat 90% of them. |
+| **Rating** | The percentile as a grade: A+ (top 10%), A, B, C, D (bottom 25%). |
+| **Excluded** | Partner-account post with limited insights — raw numbers only, never compared against weighted scores. |
+"""
+    )
+
+    st.subheader("Tricks to get the most out of it")
+    st.markdown(
+        """
+1. **Capture ruthlessly** — every "we could do that" moment goes in Ideas
+   immediately, with a note on *why* it caught your eye.
+2. **Fresh CSV every Friday** — stale data gives stale advice.
+3. **Ask the agent questions the app can't answer** — "what do my A+ posts
+   have in common?", "which venue converts followers best?" It can query
+   everything behind these pages.
+4. **Log strategy shifts** the moment you make them — that's how the system
+   learns your thinking instead of just your numbers.
+5. **Trust the caveats** — anything marked excluded or placeholder is
+   deliberately not comparable. The system never quietly guesses.
+"""
+    )
+
+
 # ---------------------------------------------------------------- Shell
 
 PAGES = {
@@ -287,6 +404,7 @@ PAGES = {
     "Ideas": page_ideas,
     "Schedule": page_schedule,
     "Strategy log": page_strategy,
+    "How to use": page_help,
 }
 
 with st.sidebar:
@@ -294,8 +412,9 @@ with st.sidebar:
     choice = st.radio("Go to", list(PAGES), label_visibility="collapsed")
     st.divider()
     st.caption(
-        "Approvals and posting stay human. For reports, planning and trend "
-        "research, open Claude Code in this folder - both use the same database."
+        "New here? Start with **How to use** below. Approvals and posting stay "
+        "human. For reports, planning and trend research, open Claude Code in "
+        "this folder - both use the same database."
     )
 
 PAGES[choice]()
