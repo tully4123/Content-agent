@@ -87,3 +87,20 @@ python scripts/export_schedule.py --week-start 2026-07-20
 
 Or from the terminal inside Claude Code: `/capture`, `/plan-week`,
 `/report`, `/strategy`, `/sync-drive`.
+
+## App interface
+
+A local Streamlit app over the same database — dashboard with scores and
+per-format chart, CSV upload + one-click scoring, idea capture with
+approve/kill buttons, schedule view, and the strategy log.
+
+```
+pip install -r requirements.txt
+python -m streamlit run app.py
+```
+
+On Windows, double-click **PubCam Agent.bat** instead (edit the Python path
+inside if yours differs from `C:\Python314`). The app and the Claude Code
+agent read and write the same `db/pubcam.db`, so they never drift apart:
+use the app for day-to-day checking and approvals, the agent for planning,
+reports, and research.
