@@ -9,6 +9,8 @@ conversations, trend research) stays with the agent in Claude Code. Both sides
 read and write the same database, so nothing gets out of sync.
 """
 import datetime as dt
+import json
+import shutil
 import sqlite3
 import subprocess
 import sys
@@ -279,6 +281,121 @@ def page_strategy() -> None:
         st.dataframe(log, width="stretch", hide_index=True)
 
 
+# ---------------------------------------------------------------- Agent
+
+AGENT_TOOLS = "Read,Glob,Grep,Edit,Write,Bash,WebSearch,WebFetch"
+
+AGENT_ACTIONS = {
+    "Trend sweep": {
+        "icon": ":material/travel_explore:",
+        "desc": "Research the web for content trends PubCam could use; log the best to the trends table.",
+        "prompt": (
+            "Run the trend-sweep skill end to end, non-interactively (never ask questions). "
+            "Log keepers with scripts/db.py add-trend. Finish with a plain-language summary of "
+            "what you logged, what you rejected and why, and anything time-sensitive."
+        ),
+    },
+    "Generate ideas": {
+        "icon": ":material/lightbulb:",
+        "desc": "Turn top/bottom posts + open trends + the calendar into concrete post ideas in the backlog.",
+        "prompt": (
+            "Run the idea-generator skill end to end, non-interactively (never ask questions). "
+            "Write ideas to the backlog with scripts/db.py add-idea. Finish with the batch grouped "
+            "by venue, hooks first, and remind that ideas need approval on the Ideas page."
+        ),
+    },
+    "Weekly report": {
+        "icon": ":material/assessment:",
+        "desc": "Performance summary vs. strategy, written to reports/.",
+        "prompt": (
+            "Run the /report workflow non-interactively (never ask questions). Write the report to "
+            "reports/ with today's date. Propose any CLAUDE.md Section 3 changes in the output text "
+            "only - do not edit CLAUDE.md. Finish by printing the report's headline findings."
+        ),
+    },
+    "Plan week (dry run)": {
+        "icon": ":material/calendar_month:",
+        "desc": "Propose next week's schedule from approved ideas. Proposal only - committing stays in Claude Code.",
+        "prompt": (
+            "Run scripts/build_schedule.py as a dry run for the next week (do NOT use --commit under "
+            "any circumstances). Present the proposed schedule and any caveats. If there are no "
+            "approved ideas, say so and list the backlog instead."
+        ),
+    },
+}
+
+
+def run_agent_action(name: str, prompt: str) -> None:
+    claude = shutil.which("claude")
+    if not claude:
+        st.error("Claude Code CLI not found on PATH. Install with: npm install -g @anthropic-ai/claude-code")
+        return
+
+    cmd = [
+        claude, "-p", prompt,
+        "--output-format", "stream-json", "--verbose",
+        "--allowedTools", AGENT_TOOLS,
+    ]
+    final_text: list[str] = []
+    with st.status(f"Running {name}... (usually 2-5 minutes, leave this tab open)", expanded=True) as status:
+        progress = st.empty()
+        proc = subprocess.Popen(
+            cmd, cwd=REPO_ROOT, stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
+            stdin=subprocess.DEVNULL, text=True, encoding="utf-8", errors="replace",
+        )
+        activity: list[str] = []
+        for line in proc.stdout:
+            line = line.strip()
+            if not line:
+                continue
+            try:
+                event = json.loads(line)
+            except json.JSONDecodeError:
+                continue
+            if event.get("type") == "assistant":
+                for block in event.get("message", {}).get("content", []):
+                    if block.get("type") == "tool_use":
+                        activity.append(f"using {block.get('name', 'tool')}...")
+                    elif block.get("type") == "text" and block.get("text", "").strip():
+                        final_text.append(block["text"])
+                        activity.append(block["text"][:120].replace("\n", " ") + "...")
+                progress.caption(activity[-1] if activity else "working...")
+            elif event.get("type") == "result":
+                if event.get("subtype") != "success":
+                    final_text.append(f"\n[Run ended with: {event.get('subtype')}]")
+        rc = proc.wait()
+        status.update(
+            label=f"{name} {'finished' if rc == 0 else 'FAILED'}",
+            state="complete" if rc == 0 else "error", expanded=False,
+        )
+    if final_text:
+        st.markdown(final_text[-1])
+        with st.expander("Full agent output"):
+            st.markdown("\n\n---\n\n".join(final_text))
+    elif rc != 0:
+        st.error("The agent run failed with no output. Try again, or run this from Claude Code directly.")
+
+
+def page_agent() -> None:
+    st.title("Agent")
+    st.write(
+        "One-click agent runs - the same workflows you'd trigger by talking to "
+        "Claude Code, powered by the same brain (CLAUDE.md + skills)."
+    )
+    st.caption(
+        "Runs use your Claude subscription and take a few minutes each. One at a "
+        "time. Anything needing a decision (approving ideas, committing a "
+        "schedule) still comes back to you - buttons never approve or publish."
+    )
+
+    for name, action in AGENT_ACTIONS.items():
+        with st.container(border=True):
+            st.markdown(f"**{name}**")
+            st.caption(action["desc"])
+            if st.button(f"Run {name.lower()}", icon=action["icon"], key=f"agent_{name}"):
+                run_agent_action(name, action["prompt"])
+
+
 # ---------------------------------------------------------------- Help
 
 def page_help() -> None:
@@ -357,6 +474,17 @@ Posts younger than 7 days are held back so scores compare fairly.
   schedule to Google Drive for Jack and Dakota.
 """
         )
+    with st.expander("Agent — one-click agent runs"):
+        st.markdown(
+            """
+- Buttons for the agent workflows: **trend sweep**, **generate ideas**,
+  **weekly report**, and **plan week (dry run)** - no terminal needed.
+- Each run takes a few minutes and uses your Claude subscription. Keep the
+  tab open while it works.
+- Buttons never approve ideas, commit schedules, or publish anything -
+  decisions always come back to you.
+"""
+        )
     with st.expander("Strategy log — what we believe and why"):
         st.markdown(
             """
@@ -404,6 +532,7 @@ PAGES = {
     "Ideas": page_ideas,
     "Schedule": page_schedule,
     "Strategy log": page_strategy,
+    "Agent": page_agent,
     "How to use": page_help,
 }
 
