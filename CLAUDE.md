@@ -142,8 +142,14 @@ Skills (see `.claude/skills/`):
   (`scripts/build_schedule.py`), dry-run by default. **Implemented** (cadence/
   ratio config is still a placeholder — see Section 4's Reach caveat sibling
   note and `config/schedule_slots.json`).
-- `idea-generator`, `trend-sweep`, `competitor-scan` — scaffolded, not yet
-  implemented. See each skill's `SKILL.md` for phase notes.
+- `trend-sweep` — web research pass for PubCam-relevant content trends,
+  writes candidates to `trends` (via `db.py add-trend`). **Implemented**
+  (agent workflow; Phase 4 automation not yet wired).
+- `idea-generator` — turns top/bottom posts + open trends + venue calendar
+  into concrete post ideas with hook lines, written to the backlog.
+  **Implemented** (hook lines are drafts until Section 2 voice is filled in).
+- `competitor-scan` — scaffolded, not yet implemented (Phase 3, needs Meta
+  developer app).
 
 Weekly cadence (target, once Phase 4 automation is in place):
 

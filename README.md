@@ -55,6 +55,12 @@ Built:
   (PubCam/Business/Trackers & Spreadsheets) as a Sheet. Creates a new file
   each run rather than truly updating in place (see that skill's caveat) —
   built but not yet live-tested against real schedule data.
+- `trend-sweep` skill — web research pass for PubCam-relevant content
+  trends, logs candidates to the `trends` table with source URLs
+- `idea-generator` skill — top/bottom posts + open trends + venue calendar
+  → concrete post ideas with draft hook lines, written to the backlog
+- Streamlit app (`app.py` / `PubCam Agent.bat`) — dashboard, CSV scoring,
+  idea approve/kill, schedule, strategy log, built-in help
 
 Still open before this is trustworthy day-to-day:
 
@@ -64,9 +70,10 @@ Still open before this is trustworthy day-to-day:
   2 carousel : 1 reel; the confirmed scoring model doesn't specify this).
 - Confirm `afterglowshq` → Illawarra mapping (CLAUDE.md Section 1, inferred
   from captions, not confirmed).
-- Phase 3 (Instagram Graph API insights + competitor-scan) and Phase 4
-  (cron automation + trend-sweep) — see individual `SKILL.md` files under
-  `.claude/skills/` and the stub scripts in `scripts/`.
+- Phase 3 (Instagram Graph API insights + competitor-scan — needs a Meta
+  developer app) and Phase 4 (scheduled automation of trend-sweep/scoring) —
+  see individual `SKILL.md` files under `.claude/skills/` and the stub
+  scripts in `scripts/`.
 - `PubCam_Post_Tracker` (Google Drive) has richer columns (Hook, Reach
   Ratio, Save Rate, "Fits Formula?", "Why It Worked / Didn't") than this
   repo's `posts` table — worth mining for `/report` later.

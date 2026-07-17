@@ -13,6 +13,9 @@ Usage examples:
     python scripts/db.py list-strategy
     python scripts/db.py top-posts --format carousel --limit 5
     python scripts/db.py bottom-posts --format carousel --limit 5
+    python scripts/db.py add-trend --platform tiktok --description "..." --source-url "..." --relevance "..."
+    python scripts/db.py list-trends --open
+    python scripts/db.py mark-trend --id 2 --acted-on
 """
 import argparse
 import json
@@ -136,6 +139,33 @@ def bottom_posts(args) -> None:
     print_rows(rows)
 
 
+def add_trend(args) -> None:
+    conn = connect()
+    cur = conn.execute(
+        "INSERT INTO trends (platform, description, source_url, relevance_note) VALUES (?, ?, ?, ?)",
+        (args.platform, args.description, args.source_url, args.relevance),
+    )
+    conn.commit()
+    print(f"Added trend id={cur.lastrowid}")
+
+
+def list_trends(args) -> None:
+    conn = connect()
+    query = "SELECT * FROM trends"
+    if args.open:
+        query += " WHERE acted_on = 0"
+    query += " ORDER BY date_spotted DESC, id DESC"
+    rows = conn.execute(query).fetchall()
+    print_rows(rows)
+
+
+def mark_trend(args) -> None:
+    conn = connect()
+    conn.execute("UPDATE trends SET acted_on = ? WHERE id = ?", (1 if args.acted_on else 0, args.id))
+    conn.commit()
+    print(f"Updated trend id={args.id} acted_on={1 if args.acted_on else 0}")
+
+
 def build_parser() -> argparse.ArgumentParser:
     p = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     sub = p.add_subparsers(dest="command", required=True)
@@ -193,6 +223,22 @@ def build_parser() -> argparse.ArgumentParser:
     bp.add_argument("--format")
     bp.add_argument("--limit", type=int, default=10)
     bp.set_defaults(func=bottom_posts)
+
+    at = sub.add_parser("add-trend")
+    at.add_argument("--platform", required=True, help="e.g. tiktok, instagram, reddit, news")
+    at.add_argument("--description", required=True)
+    at.add_argument("--source-url")
+    at.add_argument("--relevance", help="why this matters for PubCam specifically")
+    at.set_defaults(func=add_trend)
+
+    lt = sub.add_parser("list-trends")
+    lt.add_argument("--open", action="store_true", help="only trends not yet acted on")
+    lt.set_defaults(func=list_trends)
+
+    mt = sub.add_parser("mark-trend")
+    mt.add_argument("--id", required=True, type=int)
+    mt.add_argument("--acted-on", action="store_true")
+    mt.set_defaults(func=mark_trend)
 
     return p
 
