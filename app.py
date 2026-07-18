@@ -684,6 +684,66 @@ Posts younger than 7 days are held back so scores compare fairly.
     )
 
 
+# ---------------------------------------------------------------- Frothy
+
+FROTHY_PATH = REPO_ROOT / "assets" / "frothy.png"
+
+FROTHY_TIPS = {
+    "Dashboard": [
+        "Hover the dots on the score chart - each one is a post. The dashed line is your 5-post average: if it's climbing, whatever you changed is working.",
+        "Click-drag on the chart to zoom into a stretch of weeks. Double-click to zoom back out.",
+        "Filter to just carousels with the pills above the chart - that's where your biggest wins live so far.",
+        "The insights card recalculates every time you score a new CSV. Friday's upload literally changes what I tell you here.",
+    ],
+    "Score posts": [
+        "Meta Business Suite -> Insights -> Content -> Export. Pick the widest date range - re-scoring old posts is safe, nothing duplicates.",
+        "Posts younger than 7 days get held back on purpose - young posts score unfairly low and would pollute the rankings.",
+        "If scoring fails with a 'missing columns' error, Meta probably renamed a header. Paste the error to Claude Code and it's a one-line fix.",
+    ],
+    "Ideas": [
+        "Approve sparingly - the schedule builder takes approved ideas in order. A tight, good backlog beats a huge messy one.",
+        "When you capture an idea, put WHY it caught your eye in the notes. Future-you (and the agent) will thank you.",
+        "Anything mentioning a price or event date needs a source before it ships - that's the house rule.",
+        "Killed ideas aren't deleted - they're archived. You can see them in the table below.",
+    ],
+    "Trends": [
+        "Open trends feed the idea generator. If a trend looks wrong for PubCam, hit 'Mark acted' to retire it without making ideas from it.",
+        "Always peek at the source link before building on a trend - see the format in action, not just my description of it.",
+        "Trends go stale fast. If something's been open for 3+ weeks, it probably missed its moment.",
+    ],
+    "Schedule": [
+        "Mark posts as posted here right after publishing - it keeps the weekly report honest about what actually went out.",
+        "Ask Claude Code to '/sync-drive' after committing a week - Jack and Dakota get the schedule without touching any of this.",
+    ],
+    "Strategy log": [
+        "This is the brand's memory. One honest entry per real decision beats ten vague ones.",
+        "No evidence, no entry - the form will hold you to it. A number, a query result, or a report finding all count.",
+    ],
+    "Agent": [
+        "Runs take 2-5 minutes - keep the tab open and watch the progress line. Results land in the database, so nothing is lost if you navigate after it finishes.",
+        "Monday combo: Trend sweep, then Generate ideas, then approve on the Ideas page, then Plan week. Four buttons, week sorted.",
+        "Buttons never approve or publish anything. Worst case a run wastes five minutes - it can't wreck your schedule.",
+    ],
+    "How to use": [
+        "New here? Read the weekly routine table first - everything else hangs off it.",
+        "You can ask Claude Code anything about your data in plain English - 'which venue converts followers best?' works.",
+    ],
+}
+
+
+def render_frothy(page: str) -> None:
+    tips = FROTHY_TIPS.get(page, [])
+    if not tips:
+        return
+    key = f"frothy_{page}"
+    idx = st.session_state.get(key, 0) % len(tips)
+    with st.chat_message("assistant", avatar=str(FROTHY_PATH)):
+        st.markdown(f"**Frothy says:** {tips[idx]}")
+    if len(tips) > 1 and st.button("Another tip", icon=":material/autorenew:", key=f"{key}_btn"):
+        st.session_state[key] = idx + 1
+        st.rerun()
+
+
 # ---------------------------------------------------------------- Shell
 
 PAGES = {
@@ -700,9 +760,9 @@ PAGES = {
 with st.sidebar:
     st.markdown("## 🍻 PubCam Agent")
     choice = st.radio("Go to", list(PAGES), label_visibility="collapsed")
-    st.divider()
+    render_frothy(choice)
     st.caption(
-        "New here? Start with **How to use** below. Approvals and posting stay "
+        "New here? Start with **How to use**. Approvals and posting stay "
         "human. For reports, planning and trend research, open Claude Code in "
         "this folder - both use the same database."
     )
