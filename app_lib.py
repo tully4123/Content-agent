@@ -54,8 +54,14 @@ AGENT_TOOLS = "Read,Glob,Grep,Edit,Write,Bash,WebSearch,WebFetch"
 # for Opus - roughly 5x cheaper per token). The "High quality" toggle in the
 # app switches back to the default model for runs where judgment matters most.
 AGENT_MODEL_FAST = "claude-haiku-4-5"
-AGENT_MAX_TURNS = "30"
-CHAT_MAX_TURNS = "15"
+AGENT_MAX_TURNS = "20"
+CHAT_MAX_TURNS = "10"
+
+FRUGAL_NOTE = (
+    " Be token-frugal: load context with `python scripts/db.py digest` (one "
+    "call - do not run separate list commands unless you need a detail digest "
+    "lacks), keep tool calls to the minimum, and keep your final summary short."
+)
 
 
 def _agent_cmd_base(claude: str, max_turns: str) -> list[str]:
@@ -127,7 +133,7 @@ def run_agent_action(name: str, prompt: str) -> None:
         st.error("Claude Code CLI not found on PATH. Install with: npm install -g @anthropic-ai/claude-code")
         return
 
-    cmd = _agent_cmd_base(claude, AGENT_MAX_TURNS) + ["-p", prompt]
+    cmd = _agent_cmd_base(claude, AGENT_MAX_TURNS) + ["-p", prompt + FRUGAL_NOTE]
     final_text: list[str] = []
     with st.status(f"Running {name}... (usually 2-5 minutes, leave this tab open)", expanded=True) as status:
         progress = st.empty()
@@ -178,7 +184,7 @@ def run_agent_chat(prompt: str, resume_session: str | None) -> tuple[str, str | 
     if not claude:
         return ("Claude Code CLI not found on PATH. Install with: npm install -g @anthropic-ai/claude-code", None)
 
-    cmd = _agent_cmd_base(claude, CHAT_MAX_TURNS) + ["-p", prompt]
+    cmd = _agent_cmd_base(claude, CHAT_MAX_TURNS) + ["-p", prompt + FRUGAL_NOTE]
     if resume_session:
         cmd += ["--resume", resume_session]
 

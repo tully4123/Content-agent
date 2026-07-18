@@ -10,15 +10,15 @@ saved to the `briefs` table and shown to the user.
 
 ## Steps
 
-1. Load the idea and context:
+1. Load context cheaply - two calls only:
    ```
-   python scripts/db.py list-ideas
-   python scripts/db.py top-posts --limit 5
-   python scripts/db.py top-posts --format <the idea's format> --limit 3
+   python scripts/db.py digest
+   python scripts/db.py list-ideas --status approved
    ```
-   Read the idea's title/notes carefully - the hook or evidence noted at
-   capture time is the seed. Study what the top posts of the same format
-   have in common (caption style, subject, save/share balance).
+   (digest gives the performance picture; the list call gives this idea's
+   full title/notes - the hook or evidence noted at capture time is the
+   seed.) Add `top-posts --format <fmt> --limit 3` ONLY if the digest's top
+   posts don't already cover the idea's format.
 2. Write the brief as markdown with EXACTLY these sections:
 
    ```markdown

@@ -12,14 +12,14 @@ build this week, with a working hook line. Not themes, not "content pillars".
 
 ## Steps
 
-1. Gather the inputs:
+1. Gather ALL inputs with one cheap call (do NOT run separate top-posts/
+   list-trends/list-ideas commands - digest covers them at a fraction of the
+   tokens):
    ```
-   python scripts/db.py top-posts --limit 10
-   python scripts/db.py bottom-posts --limit 5
-   python scripts/db.py list-trends --open
-   python scripts/db.py list-ideas --status backlog
+   python scripts/db.py digest
    ```
-   (backlog check = don't generate near-duplicates of ideas already waiting)
+   Only follow up with a targeted query (e.g. `list-trends` for one trend's
+   full description and source URL) when the digest line isn't enough.
 2. Add calendar context for the next 2-3 weeks: season (winter fireplace
    season, footy finals, uni semester/holidays, public holidays, State of
    Origin windows). If unsure whether an event is real/dated correctly,

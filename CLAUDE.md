@@ -167,6 +167,11 @@ SQLite at `db/pubcam.db`, schema in [db/schema.sql](db/schema.sql). Tables:
 `posts`, `ideas`, `schedule`, `trends`, `strategy_log`. Initialise/reset with
 `python db/init_db.py`.
 
+**Start with `python scripts/db.py digest`** when you need the current
+picture - it returns posts/ideas/trends/schedule in one compact call
+(~500 tokens) instead of 4+ separate list commands. Only run targeted list
+commands for details the digest clips.
+
 Use [scripts/db.py](scripts/db.py) for reads/writes to `ideas`, `schedule`,
 and `strategy_log` (run `python scripts/db.py --help` for subcommands) rather
 than hand-rolling SQL — it's what `/capture`, `/strategy`, and

@@ -37,7 +37,16 @@ def connect() -> sqlite3.Connection:
 
 
 def print_rows(rows: list[sqlite3.Row]) -> None:
-    print(json.dumps([dict(r) for r in rows], indent=2))
+    # Compact JSON on purpose: these outputs land in agent context windows,
+    # so whitespace and bloat cost real tokens on every single run.
+    print(json.dumps([dict(r) for r in rows], separators=(",", ":"), ensure_ascii=False))
+
+
+def clip(text, n: int = 60):
+    if text is None:
+        return None
+    text = str(text).replace("\n", " ")
+    return text if len(text) <= n else text[: n - 3] + "..."
 
 
 def add_idea(args) -> None:
@@ -118,30 +127,90 @@ def list_strategy(args) -> None:
     print_rows(rows)
 
 
-def top_posts(args) -> None:
+POST_COLS = ("post_id, format, venue, substr(date(posted_at),1,10) AS posted, caption,"
+             " reach, saves, shares, follows, weighted_score, percentile, rating")
+
+
+def _posts_query(args, order: str) -> None:
     conn = connect()
-    query = "SELECT * FROM posts WHERE percentile IS NOT NULL"
+    query = f"SELECT {POST_COLS} FROM posts WHERE percentile IS NOT NULL"
     params = []
     if args.format:
         query += " AND format = ?"
         params.append(args.format)
-    query += " ORDER BY percentile DESC LIMIT ?"
+    query += f" ORDER BY percentile {order} LIMIT ?"
     params.append(args.limit)
-    rows = conn.execute(query, params).fetchall()
-    print_rows(rows)
+    rows = [dict(r) for r in conn.execute(query, params).fetchall()]
+    for r in rows:
+        r["caption"] = clip(r["caption"], 200 if args.full else 60)
+    print(json.dumps(rows, separators=(",", ":"), ensure_ascii=False))
+
+
+def top_posts(args) -> None:
+    _posts_query(args, "DESC")
 
 
 def bottom_posts(args) -> None:
+    _posts_query(args, "ASC")
+
+
+def digest(args) -> None:
+    """One-shot compact snapshot of the whole database - the cheap way for
+    agents to load context (replaces 4+ separate list commands)."""
     conn = connect()
-    query = "SELECT * FROM posts WHERE percentile IS NOT NULL"
-    params = []
-    if args.format:
-        query += " AND format = ?"
-        params.append(args.format)
-    query += " ORDER BY percentile ASC LIMIT ?"
-    params.append(args.limit)
-    rows = conn.execute(query, params).fetchall()
-    print_rows(rows)
+    out = {}
+
+    stats = conn.execute(
+        "SELECT COUNT(*) AS n, ROUND(AVG(weighted_score),1) AS avg_score"
+        " FROM posts WHERE percentile IS NOT NULL"
+    ).fetchone()
+    fmt_rows = conn.execute(
+        "SELECT format, COUNT(*) AS n, ROUND(AVG(weighted_score),1) AS avg"
+        " FROM posts WHERE percentile IS NOT NULL GROUP BY format ORDER BY avg DESC"
+    ).fetchall()
+    top = conn.execute(
+        "SELECT post_id, format, weighted_score, rating, caption FROM posts"
+        " WHERE percentile IS NOT NULL ORDER BY percentile DESC LIMIT 3"
+    ).fetchall()
+    bottom = conn.execute(
+        "SELECT post_id, format, weighted_score, rating, caption FROM posts"
+        " WHERE percentile IS NOT NULL ORDER BY percentile ASC LIMIT 2"
+    ).fetchall()
+    out["posts"] = {
+        "scored": stats["n"], "avg_score": stats["avg_score"],
+        "by_format": {r["format"]: {"n": r["n"], "avg": r["avg"]} for r in fmt_rows},
+        "top": [f"{r['post_id']} [{r['format']}/{r['rating']}] {r['weighted_score']} - {clip(r['caption'], 50)}" for r in top],
+        "bottom": [f"{r['post_id']} [{r['format']}/{r['rating']}] {r['weighted_score']} - {clip(r['caption'], 50)}" for r in bottom],
+    }
+
+    idea_counts = conn.execute("SELECT status, COUNT(*) AS n FROM ideas GROUP BY status").fetchall()
+    backlog = conn.execute("SELECT id, title, format FROM ideas WHERE status='backlog' ORDER BY id").fetchall()
+    approved = conn.execute(
+        "SELECT ideas.id, ideas.title, ideas.format,"
+        " EXISTS(SELECT 1 FROM briefs WHERE briefs.idea_id=ideas.id) AS has_brief"
+        " FROM ideas WHERE status IN ('approved','scheduled') ORDER BY ideas.id"
+    ).fetchall()
+    out["ideas"] = {
+        "counts": {r["status"]: r["n"] for r in idea_counts},
+        "backlog": [f"#{r['id']} [{r['format']}] {clip(r['title'], 60)}" for r in backlog],
+        "approved": [f"#{r['id']} [{r['format']}] {clip(r['title'], 60)}{'' if r['has_brief'] else ' (no brief)'}" for r in approved],
+    }
+
+    trends = conn.execute(
+        "SELECT id, platform, description FROM trends WHERE acted_on=0 ORDER BY id DESC LIMIT 10"
+    ).fetchall()
+    out["open_trends"] = [f"#{r['id']} [{r['platform']}] {clip(r['description'], 80)}" for r in trends]
+
+    sched = conn.execute(
+        "SELECT schedule.target_date, schedule.slot, schedule.status, ideas.title"
+        " FROM schedule JOIN ideas ON schedule.idea_id=ideas.id"
+        " WHERE schedule.status != 'posted' ORDER BY schedule.target_date LIMIT 10"
+    ).fetchall()
+    out["upcoming_schedule"] = [
+        f"{r['target_date']} {r['slot'] or ''} [{r['status']}] {clip(r['title'], 50)}" for r in sched
+    ]
+
+    print(json.dumps(out, separators=(",", ":"), ensure_ascii=False))
 
 
 def add_trend(args) -> None:
@@ -258,13 +327,18 @@ def build_parser() -> argparse.ArgumentParser:
 
     tp = sub.add_parser("top-posts", help="scored (pubcam.au) posts only - excluded posts have no percentile")
     tp.add_argument("--format")
-    tp.add_argument("--limit", type=int, default=10)
+    tp.add_argument("--limit", type=int, default=5)
+    tp.add_argument("--full", action="store_true", help="longer captions (default is clipped to save tokens)")
     tp.set_defaults(func=top_posts)
 
     bp = sub.add_parser("bottom-posts", help="scored (pubcam.au) posts only - excluded posts have no percentile")
     bp.add_argument("--format")
-    bp.add_argument("--limit", type=int, default=10)
+    bp.add_argument("--limit", type=int, default=5)
+    bp.add_argument("--full", action="store_true", help="longer captions (default is clipped to save tokens)")
     bp.set_defaults(func=bottom_posts)
+
+    dg = sub.add_parser("digest", help="compact one-shot snapshot of posts/ideas/trends/schedule - agents should start here")
+    dg.set_defaults(func=digest)
 
     at = sub.add_parser("add-trend")
     at.add_argument("--platform", required=True, help="e.g. tiktok, instagram, reddit, news")

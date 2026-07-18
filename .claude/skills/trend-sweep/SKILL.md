@@ -13,11 +13,14 @@ film or post within a week.
 
 ## Steps
 
-1. Check what's already logged so you don't re-add known trends:
+1. Check what's already logged so you don't re-add known trends (digest is
+   the cheap way - it lists open trend titles):
    ```
-   python scripts/db.py list-trends
+   python scripts/db.py digest
    ```
 2. Run research passes with WebSearch (and WebFetch on promising results).
+   **Token budget: at most 2-3 searches and 1-2 fetches per sweep** - pick
+   the highest-yield queries rather than sweeping every area every time.
    Query areas, adapted to the current month/season:
    - "trending Instagram Reels formats bars nightlife" + current month/year
    - "TikTok trends hospitality venues this week"
