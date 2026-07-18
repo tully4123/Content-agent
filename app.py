@@ -317,17 +317,54 @@ def page_ideas() -> None:
             info, approve_col, kill_col = st.columns([6, 1, 1])
             info.markdown(f"**#{idea['id']} - {idea['title']}**")
             info.caption(f"{idea['format']} · {idea['venue_fit']} · {idea['notes'] or 'no notes'}")
-            if approve_col.button("Approve", key=f"ap{idea['id']}"):
+            if approve_col.button("Approve", key=f"ap{idea['id']}", type="primary"):
                 execute("UPDATE ideas SET status = 'approved' WHERE id = ?", (int(idea["id"]),))
-                st.rerun()
+                st.toast(f"Approved #{idea['id']} - building the production brief now...")
+                run_agent_action(
+                    f"Production brief for idea #{idea['id']}",
+                    (
+                        f"Run the develop-idea skill for idea id {idea['id']}, non-interactively "
+                        "(never ask questions). Save the brief with scripts/db.py add-brief and "
+                        "print the full brief as your final message."
+                    ),
+                )
+                st.success("Brief saved - it lives under this idea in 'Approved & developed' below.")
             if kill_col.button("Kill", key=f"ki{idea['id']}"):
                 execute("UPDATE ideas SET status = 'killed' WHERE id = ?", (int(idea["id"]),))
                 st.rerun()
 
-    st.subheader("Everything else")
-    other = query("SELECT id, title, status, format, venue_fit, source, created_at"
-                  " FROM ideas WHERE status != 'backlog' ORDER BY id DESC")
-    st.dataframe(other, width="stretch", hide_index=True)
+    st.subheader("Approved & developed")
+    developed = query(
+        "SELECT ideas.id, ideas.title, ideas.status, ideas.format, ideas.venue_fit,"
+        "       briefs.content, briefs.created_at AS brief_date"
+        " FROM ideas LEFT JOIN briefs ON briefs.idea_id = ideas.id"
+        " WHERE ideas.status IN ('approved', 'scheduled', 'posted')"
+        " ORDER BY ideas.id DESC"
+    )
+    if developed.empty:
+        st.caption("Nothing approved yet - approve a backlog idea and its brief builds itself.")
+    for _, row in developed.iterrows():
+        label = f"#{row['id']} · {row['title']} · {row['format']} · {row['status']}"
+        with st.expander(label):
+            if row["content"]:
+                st.markdown(row["content"])
+            else:
+                st.caption("No brief yet for this idea.")
+                if st.button("Build brief", key=f"brief{row['id']}", icon=":material/construction:"):
+                    run_agent_action(
+                        f"Production brief for idea #{row['id']}",
+                        (
+                            f"Run the develop-idea skill for idea id {row['id']}, non-interactively "
+                            "(never ask questions). Save the brief with scripts/db.py add-brief and "
+                            "print the full brief as your final message."
+                        ),
+                    )
+                    st.rerun()
+
+    with st.expander("Killed ideas"):
+        killed = query("SELECT id, title, format, venue_fit, source, created_at"
+                       " FROM ideas WHERE status = 'killed' ORDER BY id DESC")
+        st.dataframe(killed, width="stretch", hide_index=True)
 
 
 # ---------------------------------------------------------------- Schedule
@@ -609,7 +646,10 @@ Posts younger than 7 days are held back so scores compare fairly.
             """
 - Capture anything worth trying: a format you saw elsewhere, a venue moment
   coming up, a spin on a past winner. More captures = better weeks.
-- **Approve** moves an idea into the pool `/plan-week` draws from.
+- **Approve** moves an idea into the pool `/plan-week` draws from - and
+  instantly builds a full production brief (hooks, shot list or slide
+  layout, caption draft, improvement angles, fact-check list). Takes a
+  few minutes; the brief lands under the idea in "Approved & developed".
   **Kill** archives it. Nothing gets scheduled without your approval.
 - If an idea depends on a price or event detail, write that in the notes —
   it must be fact-checked before the post ships. The agent enforces this.
@@ -701,6 +741,8 @@ SMEATON_TIPS = {
         "If scoring fails with a 'missing columns' error, Meta probably renamed a header. Paste the error to Claude Code and it's a one-line fix.",
     ],
     "Ideas": [
+        "Approving an idea builds its production brief automatically - hooks, shot list, caption, the lot. Give it a few minutes, then find it under 'Approved & developed'.",
+        "Every brief ends with a 'Before you post' checklist - that's the fact-check list. Nothing ships until those boxes are ticked.",
         "Approve sparingly - the schedule builder takes approved ideas in order. A tight, good backlog beats a huge messy one.",
         "When you capture an idea, put WHY it caught your eye in the notes. Future-you (and the agent) will thank you.",
         "Anything mentioning a price or event date needs a source before it ships - that's the house rule.",

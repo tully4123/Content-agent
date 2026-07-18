@@ -148,6 +148,10 @@ Skills (see `.claude/skills/`):
 - `idea-generator` — turns top/bottom posts + open trends + venue calendar
   into concrete post ideas with hook lines, written to the backlog.
   **Implemented** (hook lines are drafts until Section 2 voice is filled in).
+- `develop-idea` — builds a production brief (hooks, shot list/slide layout,
+  caption, improvement angles, fact-check list) for an approved idea, saved
+  to the `briefs` table. Triggered automatically by the app when an idea is
+  approved. **Implemented.**
 - `competitor-scan` — scaffolded, not yet implemented (Phase 3, needs Meta
   developer app).
 

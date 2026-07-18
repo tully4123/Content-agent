@@ -20,7 +20,12 @@ Usage examples:
 import argparse
 import json
 import sqlite3
+import sys
 from pathlib import Path
+
+# Windows consoles default to cp1252, which chokes on emoji in captions/briefs.
+if sys.stdout and hasattr(sys.stdout, "reconfigure"):
+    sys.stdout.reconfigure(encoding="utf-8", errors="replace")
 
 DB_PATH = Path(__file__).parent.parent / "db" / "pubcam.db"
 
@@ -166,6 +171,43 @@ def mark_trend(args) -> None:
     print(f"Updated trend id={args.id} acted_on={1 if args.acted_on else 0}")
 
 
+def add_brief(args) -> None:
+    if args.file:
+        content = Path(args.file).read_text(encoding="utf-8")
+    elif args.content:
+        content = args.content
+    else:
+        raise SystemExit("add-brief needs --file or --content")
+    conn = connect()
+    idea = conn.execute("SELECT id, title FROM ideas WHERE id = ?", (args.idea_id,)).fetchone()
+    if not idea:
+        raise SystemExit(f"No idea with id={args.idea_id}")
+    cur = conn.execute("INSERT INTO briefs (idea_id, content) VALUES (?, ?)", (args.idea_id, content))
+    conn.commit()
+    print(f"Added brief id={cur.lastrowid} for idea {args.idea_id} ({idea['title']})")
+
+
+def get_brief(args) -> None:
+    conn = connect()
+    row = conn.execute(
+        "SELECT * FROM briefs WHERE idea_id = ? ORDER BY id DESC LIMIT 1", (args.idea_id,)
+    ).fetchone()
+    if not row:
+        print(f"No brief for idea {args.idea_id}")
+    else:
+        print(row["content"])
+
+
+def list_briefs(args) -> None:
+    conn = connect()
+    rows = conn.execute(
+        "SELECT briefs.id, briefs.idea_id, briefs.created_at, ideas.title,"
+        "       substr(briefs.content, 1, 80) AS preview"
+        " FROM briefs JOIN ideas ON briefs.idea_id = ideas.id ORDER BY briefs.id DESC"
+    ).fetchall()
+    print_rows(rows)
+
+
 def build_parser() -> argparse.ArgumentParser:
     p = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     sub = p.add_subparsers(dest="command", required=True)
@@ -239,6 +281,19 @@ def build_parser() -> argparse.ArgumentParser:
     mt.add_argument("--id", required=True, type=int)
     mt.add_argument("--acted-on", action="store_true")
     mt.set_defaults(func=mark_trend)
+
+    ab = sub.add_parser("add-brief", help="attach a production brief to an idea")
+    ab.add_argument("--idea-id", required=True, type=int)
+    ab.add_argument("--file", help="path to a markdown file with the brief content")
+    ab.add_argument("--content", help="brief content inline (short briefs only)")
+    ab.set_defaults(func=add_brief)
+
+    gb = sub.add_parser("get-brief", help="print the latest brief for an idea")
+    gb.add_argument("--idea-id", required=True, type=int)
+    gb.set_defaults(func=get_brief)
+
+    lb = sub.add_parser("list-briefs")
+    lb.set_defaults(func=list_briefs)
 
     return p
 

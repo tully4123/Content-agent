@@ -52,6 +52,13 @@ CREATE TABLE IF NOT EXISTS trends (
     acted_on        INTEGER NOT NULL DEFAULT 0
 );
 
+CREATE TABLE IF NOT EXISTS briefs (
+    id          INTEGER PRIMARY KEY AUTOINCREMENT,
+    idea_id     INTEGER NOT NULL REFERENCES ideas(id),
+    created_at  TEXT NOT NULL DEFAULT (datetime('now')),
+    content     TEXT NOT NULL
+);
+
 CREATE TABLE IF NOT EXISTS strategy_log (
     id        INTEGER PRIMARY KEY AUTOINCREMENT,
     date      TEXT NOT NULL DEFAULT (date('now')),
