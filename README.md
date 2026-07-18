@@ -97,13 +97,15 @@ Or from the terminal inside Claude Code: `/capture`, `/plan-week`,
 
 ## App interface
 
-A local Streamlit app over the same database — dashboard with scores and
-per-format chart, CSV upload + one-click scoring, idea capture with
-approve/kill buttons, schedule view, and the strategy log.
+A local Streamlit app over the same database, structured as a home base:
+Home (what needs you today), Chat with the agent, scoring, ideas with
+auto-built production briefs, trends, schedule, dashboard with trend lines,
+and one-click agent runs. App-triggered agent runs default to Haiku for
+cost (a 'High quality mode' toggle switches back to the default model).
 
 ```
 pip install -r requirements.txt
-python -m streamlit run app.py
+python -m streamlit run streamlit_app.py
 ```
 
 On Windows, double-click **PubCam Agent.bat** instead (edit the Python path

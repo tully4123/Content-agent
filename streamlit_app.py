@@ -1,0 +1,35 @@
+"""PubCam Content Agent - app entry point. Launch: python -m streamlit run streamlit_app.py"""
+import streamlit as st
+
+from app_lib import render_smeaton
+
+st.set_page_config(page_title="PubCam Content Agent", page_icon="🍻", layout="wide")
+
+page = st.navigation({
+    "": [
+        st.Page("app_pages/home.py", title="Home", icon=":material/home:", default=True),
+        st.Page("app_pages/chat.py", title="Chat", icon=":material/forum:"),
+    ],
+    "Do": [
+        st.Page("app_pages/score.py", title="Score posts", icon=":material/calculate:"),
+        st.Page("app_pages/ideas.py", title="Ideas", icon=":material/lightbulb:"),
+        st.Page("app_pages/trends.py", title="Trends", icon=":material/travel_explore:"),
+        st.Page("app_pages/schedule.py", title="Schedule", icon=":material/event_upcoming:"),
+        st.Page("app_pages/agent.py", title="Agent", icon=":material/smart_toy:"),
+    ],
+    "Understand": [
+        st.Page("app_pages/dashboard.py", title="Dashboard", icon=":material/analytics:"),
+        st.Page("app_pages/strategy.py", title="Strategy log", icon=":material/history_edu:"),
+        st.Page("app_pages/help.py", title="How to use", icon=":material/help:"),
+    ],
+})
+
+with st.sidebar:
+    render_smeaton(page.title)
+
+if page.title == "Home":
+    st.title("🍻 PubCam HQ")
+else:
+    st.title(page.title)
+
+page.run()
