@@ -1,1 +1,21 @@
+name: checks
 
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  sanity:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Compile all Python
+        run: python -m compileall -q scripts db app.py
+      - name: Schema builds
+        run: python db/init_db.py
+      - name: db.py CLI answers
+        run: python scripts/db.py list-ideas
