@@ -684,11 +684,11 @@ Posts younger than 7 days are held back so scores compare fairly.
     )
 
 
-# ---------------------------------------------------------------- Frothy
+# ---------------------------------------------------------------- Smeaton
 
-FROTHY_PATH = REPO_ROOT / "assets" / "frothy.png"
+SMEATON_PATH = REPO_ROOT / "assets" / "smeaton.png"
 
-FROTHY_TIPS = {
+SMEATON_TIPS = {
     "Dashboard": [
         "Hover the dots on the score chart - each one is a post. The dashed line is your 5-post average: if it's climbing, whatever you changed is working.",
         "Click-drag on the chart to zoom into a stretch of weeks. Double-click to zoom back out.",
@@ -731,14 +731,14 @@ FROTHY_TIPS = {
 }
 
 
-def render_frothy(page: str) -> None:
-    tips = FROTHY_TIPS.get(page, [])
+def render_smeaton(page: str) -> None:
+    tips = SMEATON_TIPS.get(page, [])
     if not tips:
         return
-    key = f"frothy_{page}"
+    key = f"smeaton_{page}"
     idx = st.session_state.get(key, 0) % len(tips)
-    with st.chat_message("assistant", avatar=str(FROTHY_PATH)):
-        st.markdown(f"**Frothy says:** {tips[idx]}")
+    with st.chat_message("assistant", avatar=str(SMEATON_PATH)):
+        st.markdown(f"**Smeaton says:** {tips[idx]}")
     if len(tips) > 1 and st.button("Another tip", icon=":material/autorenew:", key=f"{key}_btn"):
         st.session_state[key] = idx + 1
         st.rerun()
@@ -760,7 +760,7 @@ PAGES = {
 with st.sidebar:
     st.markdown("## 🍻 PubCam Agent")
     choice = st.radio("Go to", list(PAGES), label_visibility="collapsed")
-    render_frothy(choice)
+    render_smeaton(choice)
     st.caption(
         "New here? Start with **How to use**. Approvals and posting stay "
         "human. For reports, planning and trend research, open Claude Code in "

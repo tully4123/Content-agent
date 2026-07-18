@@ -42,7 +42,7 @@ def draw_icon(size: int) -> Image.Image:
 
 
 def draw_mascot(size: int = 256) -> Image.Image:
-    """Frothy - the schooner mascot with a face. Transparent background."""
+    """Smeaton - the schooner mascot with a face. Transparent background."""
     img = Image.new("RGBA", (size, size), (0, 0, 0, 0))
     d = ImageDraw.Draw(img)
     s = size / 256
@@ -86,8 +86,8 @@ def main() -> None:
     out = ASSETS / "pubcam.ico"
     base.save(out, sizes=[(16, 16), (24, 24), (32, 32), (48, 48), (64, 64), (128, 128), (256, 256)])
     base.save(ASSETS / "pubcam.png")
-    draw_mascot(256).save(ASSETS / "frothy.png")
-    print(f"Wrote {out} and frothy.png")
+    draw_mascot(256).save(ASSETS / "smeaton.png")
+    print(f"Wrote {out} and smeaton.png")
 
 
 if __name__ == "__main__":
