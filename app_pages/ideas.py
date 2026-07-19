@@ -31,12 +31,18 @@ for _, idea in backlog.iterrows():
         info.caption(f"{idea['format']} · {idea['venue_fit']} · {idea['notes'] or 'no notes'}")
         if approve_col.button("Approve", key=f"ap{idea['id']}", type="primary"):
             execute("UPDATE ideas SET status = 'approved' WHERE id = ?", (int(idea["id"]),))
-            st.toast(f"Approved #{idea['id']} - building the production brief now...")
-            run_agent_action(
-                f"Production brief for idea #{idea['id']}",
-                BRIEF_PROMPT.format(id=idea["id"]),
-            )
-            st.success("Brief saved - it lives under this idea in 'Approved & developed' below.")
+            has_brief = query(
+                "SELECT COUNT(*) AS n FROM briefs WHERE idea_id = ?", (int(idea["id"]),)
+            )["n"][0]
+            if has_brief:
+                st.success("Approved - this idea already has its brief (see below).")
+            else:
+                st.toast(f"Approved #{idea['id']} - building the production brief now...")
+                run_agent_action(
+                    f"Production brief for idea #{idea['id']}",
+                    BRIEF_PROMPT.format(id=idea["id"]),
+                )
+                st.success("Brief saved - it lives under this idea in 'Approved & developed' below.")
         if kill_col.button("Kill", key=f"ki{idea['id']}"):
             execute("UPDATE ideas SET status = 'killed' WHERE id = ?", (int(idea["id"]),))
             st.rerun()

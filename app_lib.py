@@ -228,6 +228,12 @@ SMEATON_TIPS = {
         "Filter to just carousels with the pills above the chart - that's where your biggest wins live so far.",
         "The insights card recalculates every time you score a new CSV. Friday's upload literally changes what I tell you here.",
     ],
+    "Post builder": [
+        "Give me the rough idea, get the whole carousel: hook cover, one item per slide, the group-chat payoff slide, outro, caption. You just design and post it.",
+        "Anything I can't verify comes back marked [CHECK] - tick those off before it ships. I never invent prices.",
+        "Builds land in Ideas as backlog with the brief attached - approving them won't rebuild anything.",
+        "Flip on High quality mode for builds you'll actually shoot - the hooks come out sharper.",
+    ],
     "Score posts": [
         "Meta Business Suite -> Insights -> Content -> Export. Pick the widest date range - re-scoring old posts is safe, nothing duplicates.",
         "Posts younger than 7 days get held back on purpose - young posts score unfairly low and would pollute the rankings.",

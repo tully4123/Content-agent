@@ -47,6 +47,19 @@ with st.expander("Chat - talk to the agent"):
 - It won't approve ideas or commit schedules - those stay yours.
 """
     )
+with st.expander("Post builder - rough idea in, finished carousel out"):
+    st.markdown(
+        """
+- Type a basic idea ("cheapest parmas in the gong"), pick the venue fit,
+  hit build. You get the full PubCam-layout carousel: SAVE-THIS hook
+  cover, one item per slide, the screenshot-and-send payoff slide, outro,
+  and a caption draft.
+- It lands in Ideas (backlog) with the brief attached; approve it there
+  to queue it for scheduling.
+- Unverifiable facts come back as [CHECK] items - tick them off before
+  posting.
+"""
+    )
 with st.expander("Dashboard - how did our content perform?"):
     st.markdown(
         """

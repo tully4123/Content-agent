@@ -152,6 +152,10 @@ Skills (see `.claude/skills/`):
   caption, improvement angles, fact-check list) for an approved idea, saved
   to the `briefs` table. Triggered automatically by the app when an idea is
   approved. **Implemented.**
+- `build-post` — one-shot: rough idea in, finished PubCam-layout carousel
+  out (fixed template: SAVE-THIS hook cover, one item per slide,
+  screenshot-and-send payoff slide, outro, caption), saved as idea + brief
+  in a single run. Triggered by the app's Post builder page. **Implemented.**
 - `competitor-scan` — scaffolded, not yet implemented (Phase 3, needs Meta
   developer app).
 
