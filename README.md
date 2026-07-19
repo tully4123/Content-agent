@@ -6,39 +6,55 @@ Terminal-based content tracker + strategy agent for PubCam, driven by Claude Cod
 
 [PubCam](https://www.instagram.com/pubcam.au/) is a nightlife media brand in
 Wollongong, Australia that runs collab content with local venue partners. This
-repo is its content operations system: instead of a web app or SaaS tool, the
-whole thing is a local folder that Claude Code operates as an agent — a SQLite
-database, a set of Python scripts, and Claude Code skills/commands that wire
-them into workflows.
+repo is its full content operations system: a local Streamlit app (the daily
+home base) plus a Claude Code agent, sharing one SQLite database. Everything
+runs on a laptop — no hosting, no SaaS.
 
-What it does:
+The loop it runs: **trends → ideas → your approval → auto-built production
+briefs → weekly schedule → post → score → insights feed the next round.**
 
-- **Scores every Instagram post** using PubCam's weighted engagement model
-  (shares and new follows count most, likes least; score = weighted engagement
-  ÷ reach, percentile-ranked against all post history). Feed it a Meta
-  Business Suite CSV export and it flags what's working and what to retire.
-- **Keeps an ideas backlog** — spotted a good reel format elsewhere? `/capture`
-  logs it. Performance insights and trend research feed the same backlog.
-- **Builds the weekly posting schedule** from approved ideas, respecting venue
-  mix and format ratio, with a human approving every step — the agent proposes,
-  a person posts.
-- **Writes performance reports** that check results against the brand's
-  running strategy assumptions and propose updates when the data disagrees.
-- **Syncs the schedule to Google Drive** so the rest of the team sees it
-  without touching a terminal.
+What it does today:
 
-The design principle: Claude Code *is* the agent, and the repo is its brain.
-[CLAUDE.md](CLAUDE.md) holds the brand context, scoring model, and hard rules
-(e.g. never state a venue price or event detail without a verified source);
-the skills in [.claude/skills/](.claude/skills/) define the workflows; SQLite
-holds the state. No hosting, no server — it runs on a laptop.
+- **Home-base app** (`streamlit_app.py`) — open it before Instagram: what
+  needs a decision, what's trending, what's going out this week, and how the
+  last posts performed. Includes an in-app **Chat** with the agent.
+- **Post builder** — type a rough idea ("cheapest parmas in the gong") and
+  get a complete carousel in the proven PubCam layout: SAVE-THIS hook cover,
+  one item per slide, screenshot-and-send payoff slide, caption.
+- **Auto-built production briefs** — approving any idea generates its brief
+  (hooks, shot list or slide layout, caption draft, fact-check checklist).
+- **Scores every Instagram post** with PubCam's confirmed weighted engagement
+  model (shares/follows weighted most, ÷ reach, percentile-ranked, A+–D
+  ratings) from a Meta Business Suite CSV.
+- **Sweeps the web for content trends** it could adapt (source URLs required,
+  nothing invented) and **turns trends + performance data into new ideas**.
+- **Plans the weekly schedule** from approved ideas and **writes performance
+  reports** that test the brand's strategy assumptions against real numbers.
+- **Runs cheap by default** — app-triggered agent runs use Haiku with a
+  single ~500-token `digest` context call and turn caps; a High quality
+  toggle switches to the full model when the output matters.
+
+The design principles: Claude Code *is* the agent and [CLAUDE.md](CLAUDE.md)
+is its brain (brand context, scoring model, hard rules); the agent proposes
+and a human approves — nothing is published or scheduled without your click;
+no fact ships unverified — prices and event details come back as [CHECK]
+items, never guesses; and the app, chat, and terminal all share one database,
+so they never disagree.
 
 Start here: [CLAUDE.md](CLAUDE.md) — the agent's brain (brand voice, venues,
 scoring model, rules, workflow definitions).
 
-## Status: Phase 1 + Phase 2 core loop
+## Status: v1.0.1+ — full daily-driver loop
 
 Built:
+- Streamlit app as the primary interface: Home, Chat, Post builder, Score
+  posts, Ideas (approve → auto-brief), Trends, Schedule, Agent buttons,
+  Dashboard (trend lines + live insights), Strategy log, built-in help,
+  and Smeaton the mascot with page-aware tips
+- `build-post` skill — one-shot idea → PubCam-layout carousel (idea + brief)
+- `develop-idea` skill — production briefs on approval (briefs table)
+- Cost controls: Haiku default for app runs, `db.py digest` (~500-token
+  whole-database context), compact outputs, turn caps, HQ-mode toggle
 - Repo scaffold, CLAUDE.md, SQLite schema (`db/`)
 - `score-posts` skill — scores a Meta Business Suite CSV from `inbox/`.
   Methodology (weights, global percentile, rating bands, pubcam.au-only
