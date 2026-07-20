@@ -161,11 +161,14 @@ Skills (see `.claude/skills/`):
   full-bleed photo, dark scrim, Playfair Display/Sacramento type, the
   "PubCam." signature mark (fonts bundled in `assets/fonts/`, not a system
   dependency) - a deterministic script, not an agent call, so it's instant
-  and free. Drop real photos into `renders/idea_<id>/photos/slide_NN.jpg`
-  (matching the brief's slide numbers) and re-run to swap them in; slides
-  without a photo fall back to a dark placeholder with a small "Photo
-  needed" note. Only understands build-post's `**Slide N (kind)**` format.
-  **Implemented.**
+  and free. Photos come from `assets/venue_photos/` - a shared library,
+  organised by subfolder-per-venue or descriptive filenames, matched to
+  each slide's venue/headline by word overlap (an exact per-slide override
+  still works too, at `renders/idea_<id>/photos/slide_NN.jpg`). Slides
+  with no match fall back to a dark placeholder with a "Photo needed"
+  note. Photo files aren't committed (`.gitignore`); only
+  `assets/venue_photos/README.md` and the folder are. Only understands
+  build-post's `**Slide N (kind)**` format. **Implemented.**
 - `competitor-scan` — scaffolded, not yet implemented (Phase 3, needs Meta
   developer app).
 

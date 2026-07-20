@@ -83,10 +83,10 @@ if "just_built_id" in st.session_state:
     st.subheader("Turn it into images")
     st.caption(
         "Draws every slide as a 1080x1350 PNG in PubCam's real carousel style - "
-        "photo, dark scrim, script signature. No photo yet? It uses a placeholder "
-        "with a note on what to shoot; drop the real one into the idea's renders "
-        "folder and render again. Takes a couple of seconds, costs nothing (no "
-        "agent call, just Pillow drawing the brief)."
+        "photo, dark scrim, script signature. Photos come from assets/venue_photos/ "
+        "- it picks the right one per venue automatically, or a placeholder with a "
+        "note on what to shoot if nothing matches yet. Takes a couple of seconds, "
+        "costs nothing (no agent call, just Pillow drawing the brief)."
     )
     if st.button("Render carousel images", icon=":material/image:", key="render_just_built"):
         _render_and_show(nid, ntitle)

@@ -6,13 +6,20 @@ full-bleed photo, a dark scrim for legibility, and Playfair Display /
 Sacramento typography with the "PubCam." signature mark - matching the
 brand's actual Instagram carousels, not a generic template.
 
-Photos: drop real shots into renders/idea_<id>/photos/slide_<NN>.jpg (or
-.png/.jpeg/.webp) before or after rendering, matching each slide's number
-in the brief (slide_01.jpg for the cover, etc.), then re-run this script.
-Any slide without a matching photo falls back to a dark placeholder
-background with a small "Photo needed" note pulled from the brief's visual
-note, so a build is postable-as-a-mockup immediately and drops in real
-photography with zero code changes.
+Photos, in priority order:
+1. renders/idea_<id>/photos/slide_<NN>.jpg (or .png/.jpeg/.webp) - an exact
+   override for one slide of one build.
+2. assets/venue_photos/ - a shared library the renderer picks from
+   automatically. Organise it however's convenient: subfolders per venue
+   (assets/venue_photos/Heyday/*.jpg) or just descriptively named files in
+   one folder (heyday_bar_1.jpg) - matching is by word overlap between the
+   folder/file name and the slide's venue/headline, so "Heyday" matches
+   "heyday_bar_1.jpg" or a "Heyday/" folder either way. Cover/payoff/outro
+   slides (no single venue) get a photo from the library too, picked to
+   avoid repeats within the same build.
+3. A dark placeholder background with a small "Photo needed" note, if
+   neither above has anything usable - so a build is postable-as-a-mockup
+   immediately and upgrades to real photography with zero code changes.
 
 Usage:
     python scripts/render_carousel.py --idea-id 6
@@ -38,6 +45,7 @@ REPO_ROOT = Path(__file__).parent.parent
 DB_PATH = REPO_ROOT / "db" / "pubcam.db"
 RENDER_DIR = REPO_ROOT / "renders"
 FONT_DIR = REPO_ROOT / "assets" / "fonts"
+PHOTO_LIBRARY = REPO_ROOT / "assets" / "venue_photos"
 
 W, H = 1080, 1350
 MARGIN = 90
@@ -173,10 +181,66 @@ def _scrim(bg: Image.Image, base_alpha: int, bottom_alpha: int, bottom_frac: flo
     return Image.composite(black, bg, overlay)
 
 
-def _background(photos_dir: Path, number: int, base_alpha: int, bottom_alpha: int, bottom_frac: float):
-    photo = _find_photo(photos_dir, number)
+def _background(photo: Path | None, base_alpha: int, bottom_alpha: int, bottom_frac: float) -> Image.Image:
     bg = _cover_crop(Image.open(photo)) if photo else _placeholder_background()
-    return _scrim(bg, base_alpha, bottom_alpha, bottom_frac), photo is not None
+    return _scrim(bg, base_alpha, bottom_alpha, bottom_frac)
+
+
+# ------------------------------------------------------------------ photo library matching
+
+_STOPWORDS = {"the", "hotel", "bar", "pub", "and", "of", "a", "an", "spot", "venue", "check"}
+
+
+def _words(text: str) -> set[str]:
+    return {w for w in re.findall(r"[a-z]+", text.lower()) if w not in _STOPWORDS and len(w) > 2}
+
+
+def _library_photos() -> list[Path]:
+    if not PHOTO_LIBRARY.exists():
+        return []
+    return sorted(p for p in PHOTO_LIBRARY.rglob("*") if p.suffix.lower() in PHOTO_EXTS)
+
+
+def _match_library_photo(headline: str, used: set) -> Path | None:
+    """Best library photo for this venue/headline by word overlap between
+    the headline and the photo's folder + file name. None if nothing shares
+    a meaningful word - the caller then falls back to a generic pick."""
+    target = _words(headline)
+    if not target:
+        return None
+    scored = []
+    for p in _library_photos():
+        tags = _words(p.parent.name) | _words(p.stem)
+        overlap = len(target & tags)
+        if overlap:
+            scored.append((overlap, p in used, str(p), p))
+    if not scored:
+        return None
+    scored.sort(key=lambda row: (-row[0], row[1], row[2]))
+    return scored[0][3]
+
+
+def _generic_photo(seed: str, used: set) -> Path | None:
+    """Any library photo, for slides with no single venue (cover/payoff/
+    outro) or as a last resort - deterministic per seed, avoids repeats
+    within one build where possible."""
+    photos = _library_photos()
+    if not photos:
+        return None
+    pool = [p for p in photos if p not in used] or photos
+    return pool[abs(hash(seed)) % len(pool)]
+
+
+def _pick_photo(photos_dir: Path, number: int, seed_text: str, prefer_match: bool, used: set) -> Path | None:
+    manual = _find_photo(photos_dir, number)
+    if manual:
+        return manual
+    photo = _match_library_photo(seed_text, used) if prefer_match else None
+    if photo is None:
+        photo = _generic_photo(f"{number}:{seed_text}", used)
+    if photo:
+        used.add(photo)
+    return photo
 
 
 # ------------------------------------------------------------------ text helpers
@@ -240,8 +304,8 @@ def _signature(draw, cx, top_y, size) -> int:
 
 # ------------------------------------------------------------------ slide renderers
 
-def draw_cover(headline: str, photos_dir: Path, number: int) -> Image.Image:
-    bg, _ = _background(photos_dir, number, base_alpha=45, bottom_alpha=165, bottom_frac=0.7)
+def draw_cover(headline: str, photo: Path | None) -> Image.Image:
+    bg = _background(photo, base_alpha=45, bottom_alpha=165, bottom_frac=0.7)
     d = ImageDraw.Draw(bg)
 
     max_w = W - 2 * 130
@@ -258,11 +322,11 @@ def draw_cover(headline: str, photos_dir: Path, number: int) -> Image.Image:
     return bg
 
 
-def draw_item(headline: str, detail: str, visual_note: str, flagged: bool, photos_dir: Path, number: int) -> Image.Image:
-    bg, has_photo = _background(photos_dir, number, base_alpha=32, bottom_alpha=190, bottom_frac=0.5)
+def draw_item(headline: str, detail: str, visual_note: str, flagged: bool, photo: Path | None) -> Image.Image:
+    bg = _background(photo, base_alpha=32, bottom_alpha=190, bottom_frac=0.5)
     d = ImageDraw.Draw(bg)
 
-    if not has_photo and visual_note:
+    if not photo and visual_note:
         note_font = _font(SERIF_ITALIC, 24)
         note_lines = _wrap(d, f"Photo needed - {visual_note}", note_font, W - 2 * MARGIN)[:2]
         _draw_lines(d, note_lines, note_font, MARGIN, 76, NOTE_MUTED, shadow=False)
@@ -285,8 +349,8 @@ def draw_item(headline: str, detail: str, visual_note: str, flagged: bool, photo
     return bg
 
 
-def draw_payoff(headline: str, items: list[tuple[str, str]], photos_dir: Path, number: int) -> Image.Image:
-    bg, _ = _background(photos_dir, number, base_alpha=55, bottom_alpha=200, bottom_frac=0.85)
+def draw_payoff(headline: str, items: list[tuple[str, str]], photo: Path | None) -> Image.Image:
+    bg = _background(photo, base_alpha=55, bottom_alpha=200, bottom_frac=0.85)
     d = ImageDraw.Draw(bg)
 
     max_w = W - 2 * MARGIN
@@ -318,8 +382,8 @@ def draw_payoff(headline: str, items: list[tuple[str, str]], photos_dir: Path, n
     return bg
 
 
-def draw_outro(headline: str, photos_dir: Path, number: int) -> Image.Image:
-    bg, _ = _background(photos_dir, number, base_alpha=65, bottom_alpha=170, bottom_frac=0.8)
+def draw_outro(headline: str, photo: Path | None) -> Image.Image:
+    bg = _background(photo, base_alpha=65, bottom_alpha=170, bottom_frac=0.8)
     d = ImageDraw.Draw(bg)
 
     sig_bottom = _signature(d, W / 2, int(H * 0.42), 100)
@@ -348,29 +412,41 @@ def render_brief(idea_id: int, content: str, out_dir: Path) -> list[Path]:
 
     photos_dir = out_dir / "photos"
     out_dir.mkdir(parents=True, exist_ok=True)
+    used: set = set()
     missing_photos = []
+    library_picks = []
     paths = []
     for s in slides:
         n = s["number"]
         if s["kind"] == "cover":
-            img = draw_cover(s["headline"], photos_dir, n)
+            photo = _pick_photo(photos_dir, n, s["headline"], prefer_match=False, used=used)
+            img = draw_cover(s["headline"], photo)
         elif s["kind"] == "payoff":
-            img = draw_payoff(s["headline"], payoff_items, photos_dir, n)
+            photo = _pick_photo(photos_dir, n, "group chat", prefer_match=False, used=used)
+            img = draw_payoff(s["headline"], payoff_items, photo)
         elif s["kind"] == "outro":
-            img = draw_outro(s["headline"], photos_dir, n)
+            photo = _pick_photo(photos_dir, n, "pubcam outro", prefer_match=False, used=used)
+            img = draw_outro(s["headline"], photo)
         else:
-            img = draw_item(s["headline"], s["detail"], s["visual_note"], s["flagged"], photos_dir, n)
-        if _find_photo(photos_dir, n) is None:
+            photo = _pick_photo(photos_dir, n, s["headline"], prefer_match=True, used=used)
+            img = draw_item(s["headline"], s["detail"], s["visual_note"], s["flagged"], photo)
+
+        if photo is None:
             missing_photos.append(n)
+        elif not _find_photo(photos_dir, n):
+            library_picks.append((n, photo.name))
         path = out_dir / f"slide_{n:02d}.png"
         img.save(path)
         paths.append(path)
 
+    if library_picks:
+        for n, name in library_picks:
+            print(f"slide_{n:02d}: used {name} from the photo library")
     if missing_photos:
         photos_dir.mkdir(parents=True, exist_ok=True)
         nums = ", ".join(f"slide_{n:02d}.jpg" for n in missing_photos)
         print(f"Placeholder background used for: {nums}")
-        print(f"Drop real photos into {photos_dir} with those exact names and re-run to swap them in.")
+        print(f"Add photos to {PHOTO_LIBRARY} (or drop an exact override into {photos_dir}) and re-run to swap them in.")
     return paths
 
 

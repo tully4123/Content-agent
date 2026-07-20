@@ -22,7 +22,8 @@ What it does today:
   get a complete carousel in the proven PubCam layout: SAVE-THIS hook cover,
   one item per slide, screenshot-and-send payoff slide, caption. One click
   renders it as actual PNGs in PubCam's real carousel style (photo, dark
-  scrim, script signature) — drop real photos in and re-render to finish.
+  scrim, script signature) — drawing from a venue photo library
+  (`assets/venue_photos/`) that auto-matches the right shot per slide.
 - **Auto-built production briefs** — approving any idea generates its brief
   (hooks, shot list or slide layout, caption draft, fact-check checklist).
 - **Scores every Instagram post** with PubCam's confirmed weighted engagement
@@ -56,7 +57,9 @@ Built:
 - `build-post` skill — one-shot idea → PubCam-layout carousel (idea + brief)
 - `scripts/render_carousel.py` — brief → actual PNG carousel slides in
   PubCam's real style (photo, dark scrim, Playfair Display/Sacramento
-  type, signature mark); drops in real venue photos with zero code changes
+  type, signature mark); auto-picks the right shot per venue from
+  `assets/venue_photos/`, falling back to a placeholder with zero code
+  changes needed either way
 - `develop-idea` skill — production briefs on approval (briefs table)
 - Cost controls: Haiku default for app runs, `db.py digest` (~500-token
   whole-database context), compact outputs, turn caps, HQ-mode toggle

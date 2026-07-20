@@ -9,6 +9,11 @@ reports/*.csv
 !inbox/.gitkeep
 renders/
 
+# real venue photography - keep out of the public repo, just the folder + README
+assets/venue_photos/*
+!assets/venue_photos/.gitkeep
+!assets/venue_photos/README.md
+
 # machine-local symlinks into the pip-installed streamlit package
 .agents/
 .claude/skills/developing-with-streamlit

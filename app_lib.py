@@ -258,7 +258,7 @@ SMEATON_TIPS = {
         "Builds land in Ideas as backlog with the brief attached - approving them won't rebuild anything.",
         "Flip on High quality mode for builds you'll actually shoot - the hooks come out sharper.",
         "Hit 'Render carousel images' and I'll draw every slide as an actual PNG - PubCam's real photo-and-signature style, free and instant, no agent call needed.",
-        "No photo for a slide yet? It renders on a placeholder with a note on what to shoot. Drop the real photo into renders/idea_<id>/photos/ and render again to swap it in.",
+        "Drop venue photos into assets/venue_photos/ and I'll pick the right one for each slide automatically - no photo yet, no worries, it renders on a placeholder until one turns up.",
     ],
     "Score posts": [
         "Meta Business Suite -> Insights -> Content -> Export. Pick the widest date range - re-scoring old posts is safe, nothing duplicates.",
