@@ -156,6 +156,10 @@ Skills (see `.claude/skills/`):
   out (fixed template: SAVE-THIS hook cover, one item per slide,
   screenshot-and-send payoff slide, outro, caption), saved as idea + brief
   in a single run. Triggered by the app's Post builder page. **Implemented.**
+  [scripts/render_carousel.py](scripts/render_carousel.py) then turns that
+  brief into actual 1080x1350 PNG slides (Pillow, navy/amber template) - a
+  deterministic script, not an agent call, so it's instant and free. Only
+  understands build-post's `**Slide N (kind)**` format. **Implemented.**
 - `competitor-scan` — scaffolded, not yet implemented (Phase 3, needs Meta
   developer app).
 

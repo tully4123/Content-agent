@@ -58,6 +58,10 @@ with st.expander("Post builder - rough idea in, finished carousel out"):
   to queue it for scheduling.
 - Unverifiable facts come back as [CHECK] items - tick them off before
   posting.
+- Hit **Render carousel images** (here or on any past build) for actual
+  1080x1350 PNGs in the PubCam navy/amber template - free, instant, no
+  agent call. Download them all as a zip and hand to design, or post the
+  basic cards as-is.
 """
     )
 with st.expander("Dashboard - how did our content perform?"):

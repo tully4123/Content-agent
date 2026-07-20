@@ -7,6 +7,7 @@ reports/*.md
 reports/*.csv
 !reports/.gitkeep
 !inbox/.gitkeep
+renders/
 
 # machine-local symlinks into the pip-installed streamlit package
 .agents/

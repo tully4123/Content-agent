@@ -57,7 +57,28 @@ light (CLAUDE.md Section 2 is still TODO - mark wording as draft).
    every `[CHECK: ...]` item.
 4. Print the full build as your final message, and note: it's saved in the
    Ideas page (backlog - approve it there to queue it for scheduling; the
-   brief is already attached).
+   brief is already attached). The app can then render the slides as actual
+   PNGs (`scripts/render_carousel.py`) - see the exact format rule below,
+   it depends on this.
+
+## Slide format (exact - the renderer parses this)
+
+`scripts/render_carousel.py` turns this brief straight into PNG images, so
+the per-slide format below is a contract, not a style suggestion:
+
+```
+**Slide <N> (Cover|Payoff|Outro)**   <- omit the "(...)" for ordinary item slides
+- Text: "..."          <- cover/payoff/outro headline
+- Venue: ...           <- item slides: use Venue instead of Text for the headline
+- Detail: ...          <- item slides: the one detail line
+- Visual: ...          <- or "Visual note:" - designer's shot note, either key works
+```
+
+Always start each field with `- Key: value` on its own line, one blank line
+between slides, and put `[CHECK: ...]` inline in Text/Venue/Detail (never in
+Visual) so the renderer's fact-check highlighting catches it. Don't rename
+the keys or collapse a slide onto one line - a slide the renderer can't
+parse just gets silently skipped from the images.
 
 ## Rules
 

@@ -3,6 +3,7 @@ import json
 import shutil
 import sqlite3
 import subprocess
+import sys
 from pathlib import Path
 
 import pandas as pd
@@ -12,6 +13,8 @@ REPO_ROOT = Path(__file__).parent
 DB_PATH = REPO_ROOT / "db" / "pubcam.db"
 INBOX_DIR = REPO_ROOT / "inbox"
 SCORE_SCRIPT = REPO_ROOT / "scripts" / "score_posts.py"
+RENDER_SCRIPT = REPO_ROOT / "scripts" / "render_carousel.py"
+RENDER_DIR = REPO_ROOT / "renders"
 SMEATON_PATH = REPO_ROOT / "assets" / "smeaton.png"
 
 # Categorical slots from the validated reference palette (dataviz skill),
@@ -214,6 +217,27 @@ def run_agent_chat(prompt: str, resume_session: str | None) -> tuple[str, str | 
     return (texts[-1], session_id)
 
 
+# ---------------------------------------------------------------- carousel renderer
+
+def render_carousel_images(idea_id: int) -> tuple[bool, str, list[Path]]:
+    """Renders the newest brief for an idea into slide PNGs (renders/idea_<id>/).
+
+    Deterministic Pillow drawing, not an agent run - runs in a couple of
+    seconds and costs nothing. Only understands build-post's carousel format;
+    see scripts/render_carousel.py.
+    """
+    proc = subprocess.run(
+        [sys.executable, str(RENDER_SCRIPT), "--idea-id", str(idea_id)],
+        cwd=REPO_ROOT, capture_output=True, text=True, encoding="utf-8", errors="replace",
+    )
+    out_dir = RENDER_DIR / f"idea_{idea_id}"
+    images = sorted(out_dir.glob("slide_*.png")) if out_dir.exists() else []
+    if proc.returncode != 0:
+        message = proc.stderr.strip() or proc.stdout.strip() or "Render failed."
+        return False, message, images
+    return True, proc.stdout.strip(), images
+
+
 # ---------------------------------------------------------------- Smeaton
 
 SMEATON_TIPS = {
@@ -233,6 +257,7 @@ SMEATON_TIPS = {
         "Anything I can't verify comes back marked [CHECK] - tick those off before it ships. I never invent prices.",
         "Builds land in Ideas as backlog with the brief attached - approving them won't rebuild anything.",
         "Flip on High quality mode for builds you'll actually shoot - the hooks come out sharper.",
+        "Hit 'Render carousel images' and I'll draw every slide as an actual PNG in the navy/amber template - free and instant, no agent call needed.",
     ],
     "Score posts": [
         "Meta Business Suite -> Insights -> Content -> Export. Pick the widest date range - re-scoring old posts is safe, nothing duplicates.",
