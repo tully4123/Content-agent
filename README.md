@@ -20,7 +20,9 @@ What it does today:
   last posts performed. Includes an in-app **Chat** with the agent.
 - **Post builder** — type a rough idea ("cheapest parmas in the gong") and
   get a complete carousel in the proven PubCam layout: SAVE-THIS hook cover,
-  one item per slide, screenshot-and-send payoff slide, caption.
+  one item per slide, screenshot-and-send payoff slide, caption. One click
+  renders it as actual PNGs in PubCam's real carousel style (photo, dark
+  scrim, script signature) — drop real photos in and re-render to finish.
 - **Auto-built production briefs** — approving any idea generates its brief
   (hooks, shot list or slide layout, caption draft, fact-check checklist).
 - **Scores every Instagram post** with PubCam's confirmed weighted engagement
@@ -52,6 +54,9 @@ Built:
   Dashboard (trend lines + live insights), Strategy log, built-in help,
   and Smeaton the mascot with page-aware tips
 - `build-post` skill — one-shot idea → PubCam-layout carousel (idea + brief)
+- `scripts/render_carousel.py` — brief → actual PNG carousel slides in
+  PubCam's real style (photo, dark scrim, Playfair Display/Sacramento
+  type, signature mark); drops in real venue photos with zero code changes
 - `develop-idea` skill — production briefs on approval (briefs table)
 - Cost controls: Haiku default for app runs, `db.py digest` (~500-token
   whole-database context), compact outputs, turn caps, HQ-mode toggle
@@ -118,6 +123,8 @@ Home (what needs you today), Chat with the agent, scoring, ideas with
 auto-built production briefs, trends, schedule, dashboard with trend lines,
 and one-click agent runs. App-triggered agent runs default to Haiku for
 cost (a 'High quality mode' toggle switches back to the default model).
+Themed in `.streamlit/config.toml` — soft neutral surfaces, one confident
+navy accent, pill buttons, rounded cards.
 
 ```
 pip install -r requirements.txt

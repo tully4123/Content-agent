@@ -59,9 +59,12 @@ with st.expander("Post builder - rough idea in, finished carousel out"):
 - Unverifiable facts come back as [CHECK] items - tick them off before
   posting.
 - Hit **Render carousel images** (here or on any past build) for actual
-  1080x1350 PNGs in the PubCam navy/amber template - free, instant, no
-  agent call. Download them all as a zip and hand to design, or post the
-  basic cards as-is.
+  1080x1350 PNGs in PubCam's real carousel style - photo, dark scrim,
+  script signature. Free, instant, no agent call.
+- No photo yet? It renders on a placeholder background with a note on
+  what to shoot. Drop the real photo into the idea's `renders/.../photos/`
+  folder (named to match the slide, e.g. `slide_02.jpg`) and hit render
+  again to swap it in.
 """
     )
 with st.expander("Dashboard - how did our content perform?"):

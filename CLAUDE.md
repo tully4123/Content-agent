@@ -157,9 +157,15 @@ Skills (see `.claude/skills/`):
   screenshot-and-send payoff slide, outro, caption), saved as idea + brief
   in a single run. Triggered by the app's Post builder page. **Implemented.**
   [scripts/render_carousel.py](scripts/render_carousel.py) then turns that
-  brief into actual 1080x1350 PNG slides (Pillow, navy/amber template) - a
-  deterministic script, not an agent call, so it's instant and free. Only
-  understands build-post's `**Slide N (kind)**` format. **Implemented.**
+  brief into actual 1080x1350 PNG slides in PubCam's real carousel style -
+  full-bleed photo, dark scrim, Playfair Display/Sacramento type, the
+  "PubCam." signature mark (fonts bundled in `assets/fonts/`, not a system
+  dependency) - a deterministic script, not an agent call, so it's instant
+  and free. Drop real photos into `renders/idea_<id>/photos/slide_NN.jpg`
+  (matching the brief's slide numbers) and re-run to swap them in; slides
+  without a photo fall back to a dark placeholder with a small "Photo
+  needed" note. Only understands build-post's `**Slide N (kind)**` format.
+  **Implemented.**
 - `competitor-scan` — scaffolded, not yet implemented (Phase 3, needs Meta
   developer app).
 

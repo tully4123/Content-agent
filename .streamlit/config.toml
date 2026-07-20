@@ -1,0 +1,82 @@
+# PubCam Content Agent theme - an Apple-style look (SF-ish type, soft neutral
+# surfaces, pill buttons, one confident accent) built from the brand's own
+# navy/amber (see scripts/make_icon.py). Light and dark both defined so the
+# app follows the OS/browser theme like a native app would.
+
+[theme]
+base = "light"
+
+primaryColor = "#102A43"                 # PubCam navy - dark enough for white button text
+backgroundColor = "#FFFFFF"
+secondaryBackgroundColor = "#F5F5F7"     # Apple's signature off-white surface
+textColor = "#1D1D1F"                    # Apple's near-black body text
+linkColor = "#102A43"
+borderColor = "#D2D2D7"                  # hairline gray
+
+codeTextColor = "#1D1D1F"
+codeBackgroundColor = "#F5F5F7"
+
+redColor = "#FF3B30"
+orangeColor = "#F0A61D"                  # PubCam amber
+yellowColor = "#FFCC00"
+greenColor = "#34C759"
+blueColor = "#0A84FF"
+violetColor = "#AF52DE"
+grayColor = "#8E8E93"
+
+chartCategoricalColors = ["#102A43", "#F0A61D", "#0A84FF", "#34C759", "#FF3B30", "#AF52DE", "#8E8E93"]
+chartSequentialColors = ["#F5F5F7", "#E3E7ED", "#C6D1DF", "#9FB3CC", "#748FB0", "#4D6E96", "#33547A", "#1C3B60", "#102A43", "#081627"]
+
+dataframeBorderColor = "#D2D2D7"
+dataframeHeaderBackgroundColor = "#F5F5F7"
+
+font = "Inter:https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap"
+headingFont = "Inter:https://fonts.googleapis.com/css2?family=Inter:wght@600;700;800&display=swap"
+
+baseFontSize = 15
+baseFontWeight = 400
+headingFontSizes = ["30px", "23px", "19px", "16px", "14px", "13px"]
+headingFontWeights = [700, 700, 600, 600, 500, 500]
+
+linkUnderline = false
+
+baseRadius = "14px"
+buttonRadius = "full"
+showWidgetBorder = true
+showSidebarBorder = false
+
+[theme.sidebar]
+backgroundColor = "#F5F5F7"
+secondaryBackgroundColor = "#EBEBED"
+textColor = "#1D1D1F"
+borderColor = "#D2D2D7"
+primaryColor = "#102A43"
+
+[theme.dark]
+primaryColor = "#2E6DA4"                 # brightened navy - reads on black, still dark enough for white text
+backgroundColor = "#000000"
+secondaryBackgroundColor = "#1C1C1E"
+textColor = "#F5F5F7"
+linkColor = "#F0A61D"
+borderColor = "#38383A"
+
+codeTextColor = "#F5F5F7"
+codeBackgroundColor = "#1C1C1E"
+
+redColor = "#FF453A"
+orangeColor = "#FF9F0A"
+yellowColor = "#FFD60A"
+greenColor = "#30D158"
+blueColor = "#0A84FF"
+violetColor = "#BF5AF2"
+grayColor = "#98989D"
+
+dataframeBorderColor = "#38383A"
+dataframeHeaderBackgroundColor = "#1C1C1E"
+
+[theme.dark.sidebar]
+backgroundColor = "#1C1C1E"
+secondaryBackgroundColor = "#2C2C2E"
+textColor = "#F5F5F7"
+borderColor = "#38383A"
+primaryColor = "#2E6DA4"

@@ -1,8 +1,18 @@
 """Render a build-post brief's carousel slides into PNG images.
 
 Reads the "**Slide N (kind)**" blocks the `build-post` skill writes into
-`briefs.content`, and draws each one onto a 1080x1350 PNG in the PubCam
-navy/amber template - a basic, postable-as-is carousel, not a mockup.
+`briefs.content`, and draws each one in PubCam's real carousel style: a
+full-bleed photo, a dark scrim for legibility, and Playfair Display /
+Sacramento typography with the "PubCam." signature mark - matching the
+brand's actual Instagram carousels, not a generic template.
+
+Photos: drop real shots into renders/idea_<id>/photos/slide_<NN>.jpg (or
+.png/.jpeg/.webp) before or after rendering, matching each slide's number
+in the brief (slide_01.jpg for the cover, etc.), then re-run this script.
+Any slide without a matching photo falls back to a dark placeholder
+background with a small "Photo needed" note pulled from the brief's visual
+note, so a build is postable-as-a-mockup immediately and drops in real
+photography with zero code changes.
 
 Usage:
     python scripts/render_carousel.py --idea-id 6
@@ -27,35 +37,33 @@ sys.stdout.reconfigure(encoding="utf-8", errors="replace")
 REPO_ROOT = Path(__file__).parent.parent
 DB_PATH = REPO_ROOT / "db" / "pubcam.db"
 RENDER_DIR = REPO_ROOT / "renders"
+FONT_DIR = REPO_ROOT / "assets" / "fonts"
 
 W, H = 1080, 1350
 MARGIN = 90
 
-# Same brand colours as scripts/make_icon.py - keep these two files in sync.
-NAVY = (16, 42, 67)
-AMBER = (240, 166, 29)
-AMBER_DEEP = (214, 138, 10)
-FOAM = (250, 248, 242)
-INK_MUTED = (150, 163, 184)
-CHECK_RED = (214, 90, 78)
+ACCENT = (224, 90, 66)          # warm coral - the signature dot + fact-check flag colour
+INK_SHADOW = (8, 9, 12)
+WHITE = (255, 255, 255)
+BODY_WHITE = (238, 238, 233)
+NOTE_MUTED = (172, 178, 192)
 
-FONT_BOLD = [r"C:\Windows\Fonts\segoeuib.ttf", r"C:\Windows\Fonts\arialbd.ttf"]
-FONT_REG = [r"C:\Windows\Fonts\segoeui.ttf", r"C:\Windows\Fonts\arial.ttf"]
-FONT_ITALIC = [r"C:\Windows\Fonts\segoeuii.ttf", r"C:\Windows\Fonts\ariali.ttf"]
+SERIF = FONT_DIR / "PlayfairDisplay-Regular.ttf"
+SERIF_MEDIUM = FONT_DIR / "PlayfairDisplay-Medium.ttf"
+SERIF_SEMIBOLD = FONT_DIR / "PlayfairDisplay-SemiBold.ttf"
+SERIF_ITALIC = FONT_DIR / "PlayfairDisplay-Italic.ttf"
+SCRIPT = FONT_DIR / "Sacramento-Regular.ttf"
+
+PHOTO_EXTS = (".jpg", ".jpeg", ".png", ".webp")
 
 _FONT_CACHE: dict[tuple[str, int], ImageFont.FreeTypeFont] = {}
 
 
-def _font(candidates: list[str], size: int) -> ImageFont.FreeTypeFont:
-    key = (candidates[0], size)
+def _font(path: Path, size: int) -> ImageFont.FreeTypeFont:
+    key = (str(path), size)
     if key in _FONT_CACHE:
         return _FONT_CACHE[key]
-    for path in candidates:
-        if Path(path).exists():
-            font = ImageFont.truetype(path, size)
-            _FONT_CACHE[key] = font
-            return font
-    font = ImageFont.load_default(size)
+    font = ImageFont.truetype(str(path), size)
     _FONT_CACHE[key] = font
     return font
 
@@ -65,9 +73,9 @@ def _font(candidates: list[str], size: int) -> ImageFont.FreeTypeFont:
 SLIDE_RE = re.compile(r"\*\*Slide\s+(\d+)\s*(?:\(([^)]*)\))?\*\*[ \t]*\n((?:-[^\n]*\n?)+)")
 FIELD_RE = re.compile(r"^-\s*([^:]+):\s*(.*)$")
 
-# The system fonts we draw with have no colour-emoji glyphs, so pictographs
-# render as tofu boxes. Strip them from rendered text (captions elsewhere
-# keep the emoji - this only affects the PNGs).
+# The bundled fonts have no colour-emoji glyphs, so pictographs render as
+# tofu boxes. Strip them from rendered text (captions elsewhere keep the
+# emoji - this only affects the PNGs).
 _EMOJI_RANGES = "".join([
     chr(0x1F000), "-", chr(0x1FFFF),
     chr(0x2600), "-", chr(0x27BF),
@@ -113,9 +121,67 @@ def parse_slides(content: str) -> list[dict]:
     return slides
 
 
-# ------------------------------------------------------------------ drawing helpers
+# ------------------------------------------------------------------ photo + background
 
-def _wrap(draw: ImageDraw.ImageDraw, text: str, font: ImageFont.FreeTypeFont, max_width: int) -> list[str]:
+def _find_photo(photos_dir: Path, number: int) -> Path | None:
+    if not photos_dir.exists():
+        return None
+    for ext in PHOTO_EXTS:
+        candidate = photos_dir / f"slide_{number:02d}{ext}"
+        if candidate.exists():
+            return candidate
+    return None
+
+
+def _cover_crop(img: Image.Image) -> Image.Image:
+    img = img.convert("RGB")
+    src_w, src_h = img.size
+    target_ratio = W / H
+    src_ratio = src_w / src_h
+    if src_ratio > target_ratio:
+        new_w = int(src_h * target_ratio)
+        left = (src_w - new_w) // 2
+        img = img.crop((left, 0, left + new_w, src_h))
+    else:
+        new_h = int(src_w / target_ratio)
+        top = (src_h - new_h) // 2
+        img = img.crop((0, top, src_w, top + new_h))
+    return img.resize((W, H), Image.LANCZOS)
+
+
+def _placeholder_background() -> Image.Image:
+    """Moody dark gradient standing in for a photo that hasn't been shot yet."""
+    top, bottom = (20, 28, 40), (6, 7, 10)
+    img = Image.new("RGB", (1, H))
+    for y in range(H):
+        t = y / H
+        img.putpixel((0, y), tuple(int(top[c] + (bottom[c] - top[c]) * t) for c in range(3)))
+    return img.resize((W, H))
+
+
+def _scrim(bg: Image.Image, base_alpha: int, bottom_alpha: int, bottom_frac: float) -> Image.Image:
+    """Darken a background so overlaid white text stays legible - a flat dim
+    plus extra darkening toward the bottom, where captions sit (matches the
+    brand's real carousels)."""
+    overlay = Image.new("L", (1, H))
+    for y in range(H):
+        t = y / H
+        extra = 0.0 if t < (1 - bottom_frac) else (t - (1 - bottom_frac)) / bottom_frac
+        overlay.putpixel((0, y), int(base_alpha + extra * (bottom_alpha - base_alpha)))
+    overlay = overlay.resize((W, H))
+    black = Image.new("RGB", (W, H), (0, 0, 0))
+    return Image.composite(black, bg, overlay)
+
+
+def _background(photos_dir: Path, number: int, base_alpha: int, bottom_alpha: int, bottom_frac: float):
+    photo = _find_photo(photos_dir, number)
+    bg = _cover_crop(Image.open(photo)) if photo else _placeholder_background()
+    return _scrim(bg, base_alpha, bottom_alpha, bottom_frac), photo is not None
+
+
+# ------------------------------------------------------------------ text helpers
+
+def _wrap(draw, text, font, max_width) -> list[str]:
     words = text.split()
     if not words:
         return []
@@ -132,131 +198,140 @@ def _wrap(draw: ImageDraw.ImageDraw, text: str, font: ImageFont.FreeTypeFont, ma
     return lines
 
 
-def _fit_font_and_wrap(draw, text, font_paths, max_width, start_size, min_size, max_lines):
+def _fit_font_and_wrap(draw, text, font_path, max_width, start_size, min_size, max_lines):
     size = start_size
     while size >= min_size:
-        font = _font(font_paths, size)
+        font = _font(font_path, size)
         lines = _wrap(draw, text, font, max_width)
         if len(lines) <= max_lines:
             return font, lines
         size -= 4
-    font = _font(font_paths, min_size)
+    font = _font(font_path, min_size)
     return font, _wrap(draw, text, font, max_width)
 
 
-def _draw_centered_lines(draw, lines, font, cx, top_y, fill, line_height=None):
+def _draw_lines(draw, lines, font, x, top_y, fill, line_height=None, anchor="la", shadow=True):
     if line_height is None:
         ascent, descent = font.getmetrics()
-        line_height = int((ascent + descent) * 1.18)
+        line_height = int((ascent + descent) * 1.3)
     y = top_y
     for line in lines:
-        draw.text((cx, y), line, font=font, fill=fill, anchor="ma")
+        if shadow:
+            draw.text((x + 2, y + 3), line, font=font, fill=INK_SHADOW, anchor=anchor)
+        draw.text((x, y), line, font=font, fill=fill, anchor=anchor)
         y += line_height
     return y
 
 
-def _new_canvas():
-    img = Image.new("RGB", (W, H), NAVY)
-    return img, ImageDraw.Draw(img)
+def _signature(draw, cx, top_y, size) -> int:
+    """The 'PubCam.' script wordmark with its coral dot. Returns bottom y."""
+    font = _font(SCRIPT, size)
+    text = "PubCam"
+    text_w = draw.textlength(text, font=font)
+    x = cx - text_w / 2
+    draw.text((x + 2, top_y + 3), text, font=font, fill=INK_SHADOW, anchor="la")
+    draw.text((x, top_y), text, font=font, fill=WHITE, anchor="la")
+    dot_r = max(5, size // 14)
+    dot_x = x + text_w + size * 0.14
+    dot_y = top_y + size * 0.62
+    draw.ellipse([dot_x - dot_r, dot_y - dot_r, dot_x + dot_r, dot_y + dot_r], fill=ACCENT)
+    return int(top_y + size * 0.9)
 
 
 # ------------------------------------------------------------------ slide renderers
 
-def draw_cover(headline: str) -> Image.Image:
-    img, d = _new_canvas()
-    d.text((MARGIN, 72), "PUBCAM", font=_font(FONT_BOLD, 34), fill=AMBER)
-    d.rectangle([MARGIN, 122, MARGIN + 120, 128], fill=AMBER)
+def draw_cover(headline: str, photos_dir: Path, number: int) -> Image.Image:
+    bg, _ = _background(photos_dir, number, base_alpha=45, bottom_alpha=165, bottom_frac=0.7)
+    d = ImageDraw.Draw(bg)
+
+    max_w = W - 2 * 130
+    font, lines = _fit_font_and_wrap(d, headline or "Save this", SERIF, max_w, 78, 46, 4)
+    line_h = int(font.size * 1.35)
+    top = int(H * 0.40) - (len(lines) * line_h) // 2
+    y = top
+    for line in lines:
+        d.text((W / 2 + 2, y + 3), line, font=font, fill=INK_SHADOW, anchor="ma")
+        d.text((W / 2, y), line, font=font, fill=WHITE, anchor="ma")
+        y += line_h
+
+    _signature(d, W / 2, H - 168, 68)
+    return bg
+
+
+def draw_item(headline: str, detail: str, visual_note: str, flagged: bool, photos_dir: Path, number: int) -> Image.Image:
+    bg, has_photo = _background(photos_dir, number, base_alpha=32, bottom_alpha=190, bottom_frac=0.5)
+    d = ImageDraw.Draw(bg)
+
+    if not has_photo and visual_note:
+        note_font = _font(SERIF_ITALIC, 24)
+        note_lines = _wrap(d, f"Photo needed - {visual_note}", note_font, W - 2 * MARGIN)[:2]
+        _draw_lines(d, note_lines, note_font, MARGIN, 76, NOTE_MUTED, shadow=False)
 
     max_w = W - 2 * MARGIN
-    font, lines = _fit_font_and_wrap(d, headline.upper() or "SAVE THIS", FONT_BOLD, max_w, 104, 56, 6)
-    line_h = int(font.size * 1.2)
-    top = (H - len(lines) * line_h) // 2
-    _draw_centered_lines(d, lines, font, W // 2, top, FOAM, line_h)
+    hfont, hlines = _fit_font_and_wrap(d, headline or "-", SERIF_MEDIUM, max_w, 60, 38, 2)
+    h_line_h = int(hfont.size * 1.25)
 
-    tag = "SWIPE FOR THE LIST →"
-    d.text((W // 2, H - 110), tag, font=_font(FONT_BOLD, 28), fill=AMBER, anchor="mm")
-    return img
-
-
-def draw_item(index: int, total: int, headline: str, detail: str, visual_note: str, flagged: bool) -> Image.Image:
-    img, d = _new_canvas()
-    badge_d = 96
-    bx, by = MARGIN, 90
-    d.ellipse([bx, by, bx + badge_d, by + badge_d], fill=AMBER)
-    d.text((bx + badge_d / 2, by + badge_d / 2), str(index), font=_font(FONT_BOLD, 46), fill=NAVY, anchor="mm")
-    d.text((bx + badge_d + 28, by + badge_d / 2), f"{index} OF {total}", font=_font(FONT_BOLD, 26), fill=AMBER, anchor="lm")
-
-    if flagged:
-        label = "NEEDS FACT-CHECK"
-        lf = _font(FONT_BOLD, 22)
-        tw = d.textlength(label, font=lf)
-        px0 = W - MARGIN - tw - 44
-        py0 = by + 8
-        d.rounded_rectangle([px0, py0, W - MARGIN, py0 + 48], radius=24, outline=CHECK_RED, width=3)
-        d.text(((px0 + W - MARGIN) / 2, py0 + 24), label, font=lf, fill=CHECK_RED, anchor="mm")
-
-    max_w = W - 2 * MARGIN
-    hfont, hlines = _fit_font_and_wrap(d, headline or "-", FONT_BOLD, max_w, 76, 46, 3)
-    h_line_h = int(hfont.size * 1.2)
     dfont, dlines, d_line_h = None, [], 0
     if detail:
-        dfont, dlines = _fit_font_and_wrap(d, detail, FONT_REG, max_w, 40, 28, 4)
-        d_line_h = int(dfont.size * 1.3)
+        dfont, dlines = _fit_font_and_wrap(d, detail, SERIF, max_w, 34, 24, 3)
+        d_line_h = int(dfont.size * 1.35)
 
-    block_h = len(hlines) * h_line_h + (36 if dlines else 0) + len(dlines) * d_line_h
-    top = max(260, (H - block_h) // 2 + 20)
-    bottom = _draw_centered_lines(d, hlines, hfont, W // 2, top, FOAM, h_line_h)
+    block_h = len(hlines) * h_line_h + (18 if dlines else 0) + len(dlines) * d_line_h
+    top = H - 120 - block_h
+    bottom = _draw_lines(d, hlines, hfont, MARGIN, top, WHITE, h_line_h)
     if dlines:
-        detail_color = CHECK_RED if flagged else AMBER
-        _draw_centered_lines(d, dlines, dfont, W // 2, bottom + 36, detail_color, d_line_h)
-
-    if visual_note:
-        vfont, vlines = _fit_font_and_wrap(d, f"Shot: {visual_note}", FONT_ITALIC, max_w, 24, 18, 2)
-        v_line_h = int(vfont.size * 1.3)
-        vy = H - 60 - len(vlines) * v_line_h
-        _draw_centered_lines(d, vlines, vfont, W // 2, vy, INK_MUTED, v_line_h)
-    return img
+        detail_color = ACCENT if flagged else BODY_WHITE
+        _draw_lines(d, dlines, dfont, MARGIN, bottom + 18, detail_color, d_line_h)
+    return bg
 
 
-def draw_payoff(headline: str, items: list[tuple[str, str]]) -> Image.Image:
-    img, d = _new_canvas()
+def draw_payoff(headline: str, items: list[tuple[str, str]], photos_dir: Path, number: int) -> Image.Image:
+    bg, _ = _background(photos_dir, number, base_alpha=55, bottom_alpha=200, bottom_frac=0.85)
+    d = ImageDraw.Draw(bg)
+
     max_w = W - 2 * MARGIN
-    hfont, hlines = _fit_font_and_wrap(d, headline or "Send this to the group chat", FONT_BOLD, max_w, 68, 44, 2)
-    y = _draw_centered_lines(d, hlines, hfont, W // 2, 90, AMBER, int(hfont.size * 1.2)) + 30
-    d.line([MARGIN, y, W - MARGIN, y], fill=AMBER_DEEP, width=3)
+    hfont, hlines = _fit_font_and_wrap(d, headline or "Send this to the group chat", SERIF_ITALIC, max_w, 54, 36, 2)
+    y = 110
+    for line in hlines:
+        d.text((W / 2 + 2, y + 3), line, font=hfont, fill=INK_SHADOW, anchor="ma")
+        d.text((W / 2, y), line, font=hfont, fill=WHITE, anchor="ma")
+        y += int(hfont.size * 1.3)
     y += 40
 
-    bottom_margin = 90
+    bottom_margin = 100
     n = max(len(items), 1)
     avail = max(H - bottom_margin - y, n * 30)
     line_h = avail / n
-    size = int(min(40, max(18, line_h * 0.55)))
+    base_size = int(min(32, max(18, line_h * 0.5)))
 
     for idx, (label, detail) in enumerate(items):
-        text = f"{idx + 1}. {label}" + (f" — {detail}" if detail else "")
-        s = size
-        font = _font(FONT_BOLD, s)
-        while d.textlength(text, font=font) > max_w and s > 14:
-            s -= 1
-            font = _font(FONT_BOLD, s)
+        text = label + (f" — {detail}" if detail else "")
+        color = ACCENT if "[check" in text.lower() else BODY_WHITE
+        size = base_size
+        font = _font(SERIF, size)
+        while d.textlength(text, font=font) > max_w and size > 14:
+            size -= 1
+            font = _font(SERIF, size)
         ly = y + idx * line_h + line_h / 2
-        d.text((MARGIN, ly), text, font=font, fill=FOAM, anchor="lm")
-    return img
+        d.text((MARGIN + 2, ly + 2), text, font=font, fill=INK_SHADOW, anchor="lm")
+        d.text((MARGIN, ly), text, font=font, fill=color, anchor="lm")
+    return bg
 
 
-def draw_outro(headline: str) -> Image.Image:
-    img, d = _new_canvas()
-    logo_path = REPO_ROOT / "assets" / "pubcam.png"
-    if logo_path.exists():
-        logo = Image.open(logo_path).convert("RGBA")
-        logo.thumbnail((260, 260))
-        img.paste(logo, ((W - logo.width) // 2, 320), logo)
+def draw_outro(headline: str, photos_dir: Path, number: int) -> Image.Image:
+    bg, _ = _background(photos_dir, number, base_alpha=65, bottom_alpha=170, bottom_frac=0.8)
+    d = ImageDraw.Draw(bg)
 
-    max_w = W - 2 * MARGIN
-    font, lines = _fit_font_and_wrap(d, headline or "Follow @pubcam.au", FONT_BOLD, max_w, 56, 34, 4)
-    _draw_centered_lines(d, lines, font, W // 2, 660, FOAM, int(font.size * 1.25))
-    d.text((W // 2, H - 100), "@pubcam.au", font=_font(FONT_BOLD, 30), fill=AMBER, anchor="mm")
-    return img
+    sig_bottom = _signature(d, W / 2, int(H * 0.42), 100)
+
+    max_w = W - 2 * 150
+    font, lines = _fit_font_and_wrap(d, headline or "Follow @pubcam.au", SERIF_ITALIC, max_w, 36, 26, 3)
+    y = sig_bottom + 60
+    for line in lines:
+        d.text((W / 2 + 2, y + 3), line, font=font, fill=INK_SHADOW, anchor="ma")
+        d.text((W / 2, y), line, font=font, fill=BODY_WHITE, anchor="ma")
+        y += int(font.size * 1.3)
+    return bg
 
 
 # ------------------------------------------------------------------ orchestration
@@ -271,22 +346,31 @@ def render_brief(idea_id: int, content: str, out_dir: Path) -> list[Path]:
     items = [s for s in slides if s["kind"] == "item"]
     payoff_items = [(s["headline"], s["detail"]) for s in items]
 
+    photos_dir = out_dir / "photos"
     out_dir.mkdir(parents=True, exist_ok=True)
+    missing_photos = []
     paths = []
-    item_i = 0
     for s in slides:
+        n = s["number"]
         if s["kind"] == "cover":
-            img = draw_cover(s["headline"])
+            img = draw_cover(s["headline"], photos_dir, n)
         elif s["kind"] == "payoff":
-            img = draw_payoff(s["headline"], payoff_items)
+            img = draw_payoff(s["headline"], payoff_items, photos_dir, n)
         elif s["kind"] == "outro":
-            img = draw_outro(s["headline"])
+            img = draw_outro(s["headline"], photos_dir, n)
         else:
-            item_i += 1
-            img = draw_item(item_i, len(items), s["headline"], s["detail"], s["visual_note"], s["flagged"])
-        path = out_dir / f"slide_{s['number']:02d}.png"
+            img = draw_item(s["headline"], s["detail"], s["visual_note"], s["flagged"], photos_dir, n)
+        if _find_photo(photos_dir, n) is None:
+            missing_photos.append(n)
+        path = out_dir / f"slide_{n:02d}.png"
         img.save(path)
         paths.append(path)
+
+    if missing_photos:
+        photos_dir.mkdir(parents=True, exist_ok=True)
+        nums = ", ".join(f"slide_{n:02d}.jpg" for n in missing_photos)
+        print(f"Placeholder background used for: {nums}")
+        print(f"Drop real photos into {photos_dir} with those exact names and re-run to swap them in.")
     return paths
 
 
