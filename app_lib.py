@@ -16,6 +16,13 @@ SCORE_SCRIPT = REPO_ROOT / "scripts" / "score_posts.py"
 RENDER_SCRIPT = REPO_ROOT / "scripts" / "render_carousel.py"
 RENDER_DIR = REPO_ROOT / "renders"
 SMEATON_PATH = REPO_ROOT / "assets" / "smeaton.png"
+PHOTO_LIBRARY = REPO_ROOT / "assets" / "venue_photos"
+PHOTO_EXTS = (".jpg", ".jpeg", ".png", ".webp")
+
+# Folder choices for the library uploader - the real venues (matched to
+# slides by word overlap in render_carousel.py) plus a general bucket for
+# cover/payoff/outro shots that aren't tied to one venue.
+PHOTO_FOLDER_OPTIONS = ["Heyday", "Illawarra", "The Icon", "PubCam original", "General"]
 
 # Categorical slots from the validated reference palette (dataviz skill),
 # assigned in fixed order; light-mode steps. Magenta is sub-3:1 on light
@@ -30,6 +37,88 @@ INK_SECONDARY = "#52514e"
 
 VENUE_OPTIONS = ["PubCam original", "Heyday", "Illawarra", "The Icon", "multi-venue", "unclear"]
 FORMAT_OPTIONS = ["reel", "carousel", "photo", "collab"]
+
+# ---------------------------------------------------------------- theme polish
+
+_THEME_CSS = """
+<style>
+/* Elevated cards for every bordered container (Needs you / Hot right now /
+   Agent action cards / etc.) - a soft shadow instead of a flat hairline so
+   the app reads less like a form and more like a native dashboard. */
+div[data-testid="stVerticalBlockBorderWrapper"] {
+    border-radius: 18px !important;
+    transition: box-shadow 0.15s ease, transform 0.15s ease;
+    box-shadow: 0 1px 2px rgba(16, 42, 67, 0.05), 0 6px 20px rgba(16, 42, 67, 0.07);
+}
+div[data-testid="stVerticalBlockBorderWrapper"]:hover {
+    box-shadow: 0 2px 4px rgba(16, 42, 67, 0.07), 0 10px 28px rgba(16, 42, 67, 0.10);
+}
+@media (prefers-color-scheme: dark) {
+    div[data-testid="stVerticalBlockBorderWrapper"] {
+        box-shadow: 0 1px 2px rgba(0, 0, 0, 0.35), 0 6px 20px rgba(0, 0, 0, 0.30);
+    }
+    div[data-testid="stVerticalBlockBorderWrapper"]:hover {
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.40), 0 10px 28px rgba(0, 0, 0, 0.38);
+    }
+}
+
+/* Metric tiles (the pulse row) - rounded, slightly raised, room to breathe */
+div[data-testid="stMetric"] {
+    border-radius: 16px !important;
+    padding: 14px 16px !important;
+}
+
+/* Chat bubbles - softer, more app-like than square Streamlit default */
+div[data-testid="stChatMessage"] {
+    border-radius: 20px;
+    padding: 4px 6px;
+}
+
+/* page_link rows get a gentle hover nudge, matching button feel */
+a[data-testid="stPageLink-NavLink"], div[data-testid="stPageLink"] a {
+    transition: transform 0.12s ease;
+}
+a[data-testid="stPageLink-NavLink"]:hover, div[data-testid="stPageLink"] a:hover {
+    transform: translateX(2px);
+}
+
+/* Tighten the default gap between the page title and first block a touch */
+div[data-testid="stAppViewBlockContainer"] > div:first-child {
+    padding-top: 0.25rem;
+}
+</style>
+"""
+
+
+def render_theme_css() -> None:
+    """Inject the shared visual-polish layer. Call once, near the top of
+    streamlit_app.py - every page inherits it since Streamlit CSS is global."""
+    st.markdown(_THEME_CSS, unsafe_allow_html=True)
+
+
+def render_hero(title: str, subtitle: str) -> None:
+    """Branded gradient banner - PubCam navy - used at the top of Home in
+    place of a plain st.title, so the app's one 'front door' feels designed
+    rather than default Streamlit."""
+    st.markdown(
+        f"""
+        <div style="
+            background: linear-gradient(135deg, #0B2036 0%, #102A43 55%, #1F4A75 100%);
+            border-radius: 20px;
+            padding: 30px 34px;
+            margin-bottom: 8px;
+            box-shadow: 0 10px 30px rgba(16, 42, 67, 0.30);
+        ">
+            <div style="color: #FFFFFF; font-size: 27px; font-weight: 700; letter-spacing: -0.01em;">
+                {title}
+            </div>
+            <div style="color: #C9D6E3; font-size: 14px; margin-top: 5px;">
+                {subtitle}
+            </div>
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
 
 
 def query(sql: str, params: tuple = ()) -> pd.DataFrame:
@@ -236,6 +325,61 @@ def render_carousel_images(idea_id: int) -> tuple[bool, str, list[Path]]:
         message = proc.stderr.strip() or proc.stdout.strip() or "Render failed."
         return False, message, images
     return True, proc.stdout.strip(), images
+
+
+# ---------------------------------------------------------------- photo library
+
+def list_photo_library() -> dict[str, list[str]]:
+    """Current assets/venue_photos/ contents grouped by folder, for the
+    Post builder's library gallery."""
+    if not PHOTO_LIBRARY.exists():
+        return {}
+    groups: dict[str, list[str]] = {}
+    for p in sorted(PHOTO_LIBRARY.rglob("*")):
+        if p.suffix.lower() not in PHOTO_EXTS:
+            continue
+        folder = p.relative_to(PHOTO_LIBRARY).parent
+        key = str(folder) if str(folder) != "." else "(ungrouped)"
+        groups.setdefault(key, []).append(p.name)
+    return groups
+
+
+def save_uploaded_photos(folder: str, uploaded_files) -> int:
+    """Save uploaded photos into assets/venue_photos/<folder>/ so
+    render_carousel.py's word-overlap matching picks them up automatically
+    on the next render. Returns how many were saved."""
+    if not uploaded_files:
+        return 0
+    dest = PHOTO_LIBRARY / folder
+    dest.mkdir(parents=True, exist_ok=True)
+    saved = 0
+    for f in uploaded_files:
+        name = Path(f.name).name  # strip any path components from the original filename
+        (dest / name).write_bytes(f.getbuffer())
+        saved += 1
+    return saved
+
+
+def delete_photo(folder: str, filename: str) -> None:
+    path = PHOTO_LIBRARY / folder / filename
+    if path.exists():
+        path.unlink()
+
+
+def save_slide_override(idea_id: int, slide_number: int, uploaded_file) -> Path:
+    """Save an exact photo for one slide of one build - takes priority over
+    the shared library for that slide (see render_carousel.py's photo
+    priority order)."""
+    dest_dir = RENDER_DIR / f"idea_{idea_id}" / "photos"
+    dest_dir.mkdir(parents=True, exist_ok=True)
+    ext = Path(uploaded_file.name).suffix.lower() or ".jpg"
+    for existing_ext in PHOTO_EXTS:
+        stale = dest_dir / f"slide_{slide_number:02d}{existing_ext}"
+        if stale.exists() and existing_ext != ext:
+            stale.unlink()
+    dest = dest_dir / f"slide_{slide_number:02d}{ext}"
+    dest.write_bytes(uploaded_file.getbuffer())
+    return dest
 
 
 # ---------------------------------------------------------------- Smeaton

@@ -2,10 +2,13 @@ import datetime as dt
 
 import streamlit as st
 
-from app_lib import query
+from app_lib import query, render_hero
 
 today = dt.date.today()
-st.caption(today.strftime("%A %d %B %Y"))
+hour = dt.datetime.now().hour
+greeting = "Morning" if hour < 12 else ("Afternoon" if hour < 18 else "Evening")
+render_hero("PubCam HQ", f"{greeting} · {today.strftime('%A %d %B %Y')}")
+st.write("")
 
 # ---- pulse row
 scored = query(

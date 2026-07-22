@@ -1,13 +1,14 @@
 """PubCam Content Agent - app entry point. Launch: python -m streamlit run streamlit_app.py"""
 import streamlit as st
 
-from app_lib import REPO_ROOT, render_smeaton
+from app_lib import REPO_ROOT, render_smeaton, render_theme_css
 
 st.set_page_config(
     page_title="PubCam Content Agent",
     page_icon=str(REPO_ROOT / "assets" / "pubcam.png"),
     layout="wide",
 )
+render_theme_css()
 st.logo(str(REPO_ROOT / "assets" / "pubcam.png"), size="large")
 
 page = st.navigation({
@@ -33,9 +34,7 @@ page = st.navigation({
 with st.sidebar:
     render_smeaton(page.title)
 
-if page.title == "Home":
-    st.title("🍻 PubCam HQ")
-else:
+if page.title != "Home":
     st.title(page.title)
 
 page.run()
