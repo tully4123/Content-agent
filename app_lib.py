@@ -90,6 +90,47 @@ a[data-testid="stPageLink-NavLink"]:hover, div[data-testid="stPageLink"] a:hover
 div[data-testid="stAppViewBlockContainer"] > div:first-child {
     padding-top: 0.25rem;
 }
+
+/* Smeaton - fades/slides in fresh on every render (each new tip replays
+   this, since Streamlit remounts the node), with a small idle bob on the
+   avatar so he reads as alive, not a static image. */
+div[class*="st-key-smeaton_box"] {
+    animation: smeaton-in 0.35s ease-out;
+}
+@keyframes smeaton-in {
+    from { opacity: 0; transform: translateY(6px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+div[class*="st-key-smeaton_box"] img {
+    animation: smeaton-bob 3.2s ease-in-out infinite;
+    transform-origin: 50% 85%;
+}
+@keyframes smeaton-bob {
+    0%, 100% { transform: rotate(0deg) translateY(0); }
+    50% { transform: rotate(-4deg) translateY(-2px); }
+}
+@media (prefers-reduced-motion: reduce) {
+    div[class*="st-key-smeaton_box"], div[class*="st-key-smeaton_box"] img {
+        animation: none;
+    }
+}
+
+/* The pulse dot marks a live, data-driven Smeaton nudge (vs. a static tip) */
+.smeaton-pulse-dot {
+    display: inline-block;
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: #F0A61D;
+    margin-right: 6px;
+    vertical-align: middle;
+    animation: smeaton-pulse 1.6s ease-in-out infinite;
+}
+@keyframes smeaton-pulse {
+    0% { box-shadow: 0 0 0 0 rgba(240, 166, 29, 0.55); }
+    70% { box-shadow: 0 0 0 8px rgba(240, 166, 29, 0); }
+    100% { box-shadow: 0 0 0 0 rgba(240, 166, 29, 0); }
+}
 </style>
 """
 
@@ -556,14 +597,85 @@ SMEATON_TIPS = {
 }
 
 
+def _dynamic_smeaton_tip(page: str) -> str | None:
+    """A live-data nudge for pages where a real number beats a canned tip.
+    None if nothing's actionable right now - the caller falls back to the
+    regular rotating tips."""
+    try:
+        if page == "Home":
+            n = int(query("SELECT COUNT(*) AS n FROM ideas WHERE status='backlog'")["n"][0])
+            if n >= 5:
+                return f"{n} ideas are sitting in the backlog - clear a few before they go stale."
+        elif page == "Ideas":
+            n = int(query("SELECT COUNT(*) AS n FROM ideas WHERE status='backlog'")["n"][0])
+            if n:
+                return f"{n} idea{'s' if n != 1 else ''} waiting on you right now - approve or kill them below."
+        elif page == "Trends":
+            n = int(query(
+                "SELECT COUNT(*) AS n FROM trends WHERE acted_on=0 AND date_spotted <= date('now','-21 days')"
+            )["n"][0])
+            if n:
+                return f"{n} trend{'s' if n != 1 else ''} been open 3+ weeks - use {'them' if n != 1 else 'it'} or retire {'them' if n != 1 else 'it'}, going cold."
+        elif page == "Post builder":
+            n = int(query("SELECT COUNT(*) AS n FROM post_refs WHERE idea_id IS NULL")["n"][0])
+            if n:
+                return f"{n} reference post{'s' if n != 1 else ''} saved but not built yet - the library at the bottom is waiting on you."
+        elif page == "Reel builder":
+            n = int(query("SELECT COUNT(*) AS n FROM reel_refs WHERE idea_id IS NULL")["n"][0])
+            if n:
+                return f"{n} reference reel{'s' if n != 1 else ''} saved but not built yet - the library at the bottom is waiting on you."
+        elif page == "Schedule":
+            n = int(query(
+                "SELECT COUNT(*) AS n FROM schedule WHERE status != 'posted'"
+                " AND target_date BETWEEN date('now') AND date('now','+7 days')"
+            )["n"][0])
+            if n:
+                return f"{n} post{'s' if n != 1 else ''} going out in the next 7 days - open the brief and get shooting."
+        elif page == "Dashboard":
+            scored = query(
+                "SELECT weighted_score FROM posts WHERE scoring_excluded=0"
+                " AND weighted_score IS NOT NULL ORDER BY posted_at"
+            )
+            if len(scored) >= 10:
+                recent = scored["weighted_score"].tail(5).mean()
+                earlier = scored["weighted_score"].iloc[:-5].mean()
+                delta = recent - earlier
+                if abs(delta) >= 5:
+                    mood = "climbing" if delta > 0 else "dipping"
+                    advice = "keep doing whatever you changed" if delta > 0 else "worth a look at what shifted"
+                    return f"Your last 5 posts are {mood} ({delta:+.0f} vs before) - {advice}."
+    except Exception:
+        return None
+    return None
+
+
 def render_smeaton(page: str) -> None:
     tips = SMEATON_TIPS.get(page, [])
-    if not tips:
+    dynamic_tip = _dynamic_smeaton_tip(page)
+    if not tips and not dynamic_tip:
         return
+
     key = f"smeaton_{page}"
-    idx = st.session_state.get(key, 0) % len(tips)
-    with st.chat_message("assistant", avatar=str(SMEATON_PATH)):
-        st.markdown(f"**Smeaton says:** {tips[idx]}")
-    if len(tips) > 1 and st.button("Another tip", icon=":material/autorenew:", key=f"{key}_btn"):
-        st.session_state[key] = idx + 1
-        st.rerun()
+    dyn_key = f"{key}_dyn_seen"
+    idx = st.session_state.get(key, 0) % len(tips) if tips else 0
+    show_dynamic = bool(dynamic_tip) and not st.session_state.get(dyn_key, False)
+
+    with st.container(key=f"smeaton_box_{page.replace(' ', '_')}"):
+        with st.chat_message("assistant", avatar=str(SMEATON_PATH)):
+            if show_dynamic:
+                st.markdown(
+                    f"<span class='smeaton-pulse-dot'></span>**Smeaton says:** {dynamic_tip}",
+                    unsafe_allow_html=True,
+                )
+            elif tips:
+                st.markdown(f"**Smeaton says:** {tips[idx]}")
+            else:
+                st.markdown("**Smeaton says:** All clear here - nothing urgent.")
+
+        has_more = (tips and len(tips) > 1) or show_dynamic
+        if has_more and st.button("Another tip", icon=":material/autorenew:", key=f"{key}_btn"):
+            if show_dynamic:
+                st.session_state[dyn_key] = True
+            else:
+                st.session_state[key] = idx + 1
+            st.rerun()
