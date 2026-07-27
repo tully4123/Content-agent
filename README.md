@@ -24,6 +24,10 @@ What it does today:
   renders it as actual PNGs in PubCam's real carousel style (photo, dark
   scrim, script signature) — drawing from a venue photo library
   (`assets/venue_photos/`) that auto-matches the right shot per slide.
+- **Reel builder** — drop in a reference reel (video and/or link) plus a
+  note on what to copy (hook, pacing, a specific mechanic) and get back a
+  PubCam-branded script in that style. No vision step — it works from your
+  note, not the video pixels.
 - **Auto-built production briefs** — approving any idea generates its brief
   (hooks, shot list or slide layout, caption draft, fact-check checklist).
 - **Scores every Instagram post** with PubCam's confirmed weighted engagement
@@ -61,6 +65,9 @@ Built:
   `assets/venue_photos/`, falling back to a placeholder with zero code
   changes needed either way
 - `develop-idea` skill — production briefs on approval (briefs table)
+- `build-reel` skill — reference reel (video/link + notes on what to copy)
+  → PubCam-branded script (idea + brief), linked back to the `reel_refs`
+  table row it came from
 - Cost controls: Haiku default for app runs, `db.py digest` (~500-token
   whole-database context), compact outputs, turn caps, HQ-mode toggle
 - Repo scaffold, CLAUDE.md, SQLite schema (`db/`)

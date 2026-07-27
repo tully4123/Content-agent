@@ -66,3 +66,13 @@ CREATE TABLE IF NOT EXISTS strategy_log (
     decision  TEXT,
     evidence  TEXT
 );
+
+CREATE TABLE IF NOT EXISTS reel_refs (
+    id          INTEGER PRIMARY KEY AUTOINCREMENT,
+    created_at  TEXT NOT NULL DEFAULT (datetime('now')),
+    source_url  TEXT,
+    file_name   TEXT,
+    venue_fit   TEXT,
+    notes       TEXT NOT NULL,
+    idea_id     INTEGER REFERENCES ideas(id)
+);

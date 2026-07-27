@@ -18,6 +18,8 @@ RENDER_DIR = REPO_ROOT / "renders"
 SMEATON_PATH = REPO_ROOT / "assets" / "smeaton.png"
 PHOTO_LIBRARY = REPO_ROOT / "assets" / "venue_photos"
 PHOTO_EXTS = (".jpg", ".jpeg", ".png", ".webp")
+REEL_REF_DIR = REPO_ROOT / "reference_reels"
+VIDEO_EXTS = ["mp4", "mov", "webm", "m4v"]
 
 # Folder choices for the library uploader - the real venues (matched to
 # slides by word overlap in render_carousel.py) plus a general bucket for
@@ -177,6 +179,13 @@ BRIEF_PROMPT = (
     "Run the develop-idea skill for idea id {id}, non-interactively (never ask "
     "questions). Save the brief with scripts/db.py add-brief and print the full "
     "brief as your final message."
+)
+
+REEL_PROMPT = (
+    "Run the build-reel skill for reel reference id {ref_id}. Venue fit: {venue}. "
+    "Non-interactive (never ask questions). Save via scripts/db.py add-idea + "
+    "add-brief, link it back with scripts/db.py link-reel-ref --id {ref_id} "
+    "--idea-id <the new idea id>, and print the full build as your final message."
 )
 
 AGENT_ACTIONS = {
@@ -366,6 +375,51 @@ def delete_photo(folder: str, filename: str) -> None:
         path.unlink()
 
 
+def save_reel_reference(source_url: str, venue_fit: str, notes: str, uploaded_file) -> int:
+    """Log a reference reel (Reel builder's drop zone) and, if a video file
+    was attached, save it under reference_reels/<id>/. Returns the new
+    reel_refs id."""
+    conn = sqlite3.connect(DB_PATH)
+    try:
+        cur = conn.execute(
+            "INSERT INTO reel_refs (source_url, file_name, venue_fit, notes) VALUES (?, ?, ?, ?)",
+            (source_url or None, uploaded_file.name if uploaded_file else None, venue_fit, notes),
+        )
+        conn.commit()
+        ref_id = cur.lastrowid
+    finally:
+        conn.close()
+    if uploaded_file:
+        dest_dir = REEL_REF_DIR / str(ref_id)
+        dest_dir.mkdir(parents=True, exist_ok=True)
+        (dest_dir / Path(uploaded_file.name).name).write_bytes(uploaded_file.getbuffer())
+    return ref_id
+
+
+def list_reel_references() -> pd.DataFrame:
+    return query(
+        "SELECT reel_refs.*, ideas.title AS idea_title, ideas.status AS idea_status,"
+        " EXISTS(SELECT 1 FROM briefs WHERE briefs.idea_id = reel_refs.idea_id) AS has_brief"
+        " FROM reel_refs LEFT JOIN ideas ON reel_refs.idea_id = ideas.id"
+        " ORDER BY reel_refs.id DESC"
+    )
+
+
+def reel_reference_file(ref_id: int) -> Path | None:
+    d = REEL_REF_DIR / str(ref_id)
+    if not d.exists():
+        return None
+    files = [f for f in d.iterdir() if f.is_file()]
+    return files[0] if files else None
+
+
+def delete_reel_reference(ref_id: int) -> None:
+    execute("DELETE FROM reel_refs WHERE id = ?", (ref_id,))
+    d = REEL_REF_DIR / str(ref_id)
+    if d.exists():
+        shutil.rmtree(d)
+
+
 def save_slide_override(idea_id: int, slide_number: int, uploaded_file) -> Path:
     """Save an exact photo for one slide of one build - takes priority over
     the shared library for that slide (see render_carousel.py's photo
@@ -403,6 +457,12 @@ SMEATON_TIPS = {
         "Flip on High quality mode for builds you'll actually shoot - the hooks come out sharper.",
         "Hit 'Render carousel images' and I'll draw every slide as an actual PNG - PubCam's real photo-and-signature style, free and instant, no agent call needed.",
         "Drop venue photos into assets/venue_photos/ and I'll pick the right one for each slide automatically - no photo yet, no worries, it renders on a placeholder until one turns up.",
+    ],
+    "Reel builder": [
+        "Drop in a video and write what you actually want copied - the hook, the pacing, a specific mechanic. I never watch the file, only your note, so the more specific it is the closer the script lands.",
+        "A source link works too if you don't have the file - I'll try one fetch to see what it's about, best-effort, never a blocker.",
+        "Builds land in Ideas as backlog, same as everything else - approve it there when you're happy.",
+        "No trending sound gets named unless your note or the link actually said so - otherwise it comes back flagged [CHECK] rather than made up.",
     ],
     "Score posts": [
         "Meta Business Suite -> Insights -> Content -> Export. Pick the widest date range - re-scoring old posts is safe, nothing duplicates.",

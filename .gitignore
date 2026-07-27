@@ -14,6 +14,11 @@ assets/venue_photos/*
 !assets/venue_photos/.gitkeep
 !assets/venue_photos/README.md
 
+# saved reference reel videos - same treatment
+reference_reels/*
+!reference_reels/.gitkeep
+!reference_reels/README.md
+
 # machine-local symlinks into the pip-installed streamlit package
 .agents/
 .claude/skills/developing-with-streamlit

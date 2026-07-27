@@ -18,6 +18,7 @@ page = st.navigation({
     ],
     "Do": [
         st.Page("app_pages/build.py", title="Post builder", icon=":material/construction:"),
+        st.Page("app_pages/reel_builder.py", title="Reel builder", icon=":material/movie:"),
         st.Page("app_pages/score.py", title="Score posts", icon=":material/calculate:"),
         st.Page("app_pages/ideas.py", title="Ideas", icon=":material/lightbulb:"),
         st.Page("app_pages/trends.py", title="Trends", icon=":material/travel_explore:"),

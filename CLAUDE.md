@@ -169,6 +169,12 @@ Skills (see `.claude/skills/`):
   note. Photo files aren't committed (`.gitignore`); only
   `assets/venue_photos/README.md` and the folder are. Only understands
   build-post's `**Slide N (kind)**` format. **Implemented.**
+- `build-reel` — one-shot: a saved reference reel (video file and/or link,
+  plus the user's notes on what to copy — hook, pacing, structure) in,
+  PubCam-branded reel script out (hooks, shot list with text overlays,
+  caption), saved as idea + brief, linked back to the `reel_refs` row it
+  came from. No vision step — works from the notes, not the video pixels.
+  Triggered by the app's Reel builder page. **Implemented.**
 - `competitor-scan` — scaffolded, not yet implemented (Phase 3, needs Meta
   developer app).
 
@@ -181,8 +187,10 @@ Weekly cadence (target, once Phase 4 automation is in place):
 ## 7. Database
 
 SQLite at `db/pubcam.db`, schema in [db/schema.sql](db/schema.sql). Tables:
-`posts`, `ideas`, `schedule`, `trends`, `strategy_log`. Initialise/reset with
-`python db/init_db.py`.
+`posts`, `ideas`, `schedule`, `trends`, `briefs`, `strategy_log`, `reel_refs`
+(saved reference reels for `build-reel`; links to `ideas.id` once built).
+Initialise/reset with `python db/init_db.py` (safe to re-run on an existing
+database — `CREATE TABLE IF NOT EXISTS` only adds what's missing).
 
 **Start with `python scripts/db.py digest`** when you need the current
 picture - it returns posts/ideas/trends/schedule in one compact call

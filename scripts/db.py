@@ -16,6 +16,8 @@ Usage examples:
     python scripts/db.py add-trend --platform tiktok --description "..." --source-url "..." --relevance "..."
     python scripts/db.py list-trends --open
     python scripts/db.py mark-trend --id 2 --acted-on
+    python scripts/db.py get-reel-ref --id 1
+    python scripts/db.py link-reel-ref --id 1 --idea-id 9
 """
 import argparse
 import json
@@ -210,6 +212,13 @@ def digest(args) -> None:
         f"{r['target_date']} {r['slot'] or ''} [{r['status']}] {clip(r['title'], 50)}" for r in sched
     ]
 
+    unbuilt_refs = conn.execute(
+        "SELECT id, venue_fit, notes FROM reel_refs WHERE idea_id IS NULL ORDER BY id DESC LIMIT 5"
+    ).fetchall()
+    out["unbuilt_reel_refs"] = [
+        f"#{r['id']} [{r['venue_fit'] or 'unset'}] {clip(r['notes'], 60)}" for r in unbuilt_refs
+    ]
+
     print(json.dumps(out, separators=(",", ":"), ensure_ascii=False))
 
 
@@ -265,6 +274,40 @@ def get_brief(args) -> None:
         print(f"No brief for idea {args.idea_id}")
     else:
         print(row["content"])
+
+
+def add_reel_ref(args) -> None:
+    conn = connect()
+    cur = conn.execute(
+        "INSERT INTO reel_refs (source_url, file_name, venue_fit, notes) VALUES (?, ?, ?, ?)",
+        (args.source_url, args.file_name, args.venue_fit, args.notes),
+    )
+    conn.commit()
+    print(f"Added reel_ref id={cur.lastrowid}")
+
+
+def get_reel_ref(args) -> None:
+    conn = connect()
+    row = conn.execute("SELECT * FROM reel_refs WHERE id = ?", (args.id,)).fetchone()
+    if not row:
+        raise SystemExit(f"No reel_ref with id={args.id}")
+    print(json.dumps(dict(row), separators=(",", ":"), ensure_ascii=False))
+
+
+def list_reel_refs(args) -> None:
+    conn = connect()
+    query = "SELECT * FROM reel_refs"
+    if args.unbuilt:
+        query += " WHERE idea_id IS NULL"
+    query += " ORDER BY id DESC"
+    print_rows(conn.execute(query).fetchall())
+
+
+def link_reel_ref(args) -> None:
+    conn = connect()
+    conn.execute("UPDATE reel_refs SET idea_id = ? WHERE id = ?", (args.idea_id, args.id))
+    conn.commit()
+    print(f"Linked reel_ref {args.id} -> idea {args.idea_id}")
 
 
 def list_briefs(args) -> None:
@@ -368,6 +411,26 @@ def build_parser() -> argparse.ArgumentParser:
 
     lb = sub.add_parser("list-briefs")
     lb.set_defaults(func=list_briefs)
+
+    ar = sub.add_parser("add-reel-ref", help="log a reference reel (app uses this directly; agents shouldn't need it)")
+    ar.add_argument("--source-url")
+    ar.add_argument("--file-name")
+    ar.add_argument("--venue-fit")
+    ar.add_argument("--notes", required=True, help="what to copy from this reference - hook, pacing, structure")
+    ar.set_defaults(func=add_reel_ref)
+
+    gr = sub.add_parser("get-reel-ref", help="read one reference reel's notes/url/venue-fit")
+    gr.add_argument("--id", required=True, type=int)
+    gr.set_defaults(func=get_reel_ref)
+
+    lr = sub.add_parser("list-reel-refs")
+    lr.add_argument("--unbuilt", action="store_true", help="only references with no idea built from them yet")
+    lr.set_defaults(func=list_reel_refs)
+
+    lkr = sub.add_parser("link-reel-ref", help="attach a reference reel to the idea built from it")
+    lkr.add_argument("--id", required=True, type=int)
+    lkr.add_argument("--idea-id", required=True, type=int)
+    lkr.set_defaults(func=link_reel_ref)
 
     return p
 

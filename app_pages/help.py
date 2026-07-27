@@ -68,6 +68,20 @@ with st.expander("Post builder - rough idea in, finished carousel out"):
   photo turns up in the library - no re-typing anything.
 """
     )
+with st.expander("Reel builder - reference reel in, PubCam script out"):
+    st.markdown(
+        """
+- Drop a video file and/or a link, plus a note on what you actually want
+  copied (the hook, the pacing, a specific mechanic) - be specific, since
+  the agent works from your note, not the video itself (no vision step).
+- Get back a script in that style: hooks, shot list with text overlays,
+  caption. Lands in Ideas as backlog with its brief attached.
+- No trending sound gets named unless your note or link actually said
+  so - otherwise it's flagged [CHECK].
+- The reference library below keeps every saved reel so you can build
+  from it later, or just browse for inspiration.
+"""
+    )
 with st.expander("Dashboard - how did our content perform?"):
     st.markdown(
         """
