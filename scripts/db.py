@@ -18,6 +18,8 @@ Usage examples:
     python scripts/db.py mark-trend --id 2 --acted-on
     python scripts/db.py get-reel-ref --id 1
     python scripts/db.py link-reel-ref --id 1 --idea-id 9
+    python scripts/db.py get-post-ref --id 1
+    python scripts/db.py link-post-ref --id 1 --idea-id 10
 """
 import argparse
 import json
@@ -219,6 +221,11 @@ def digest(args) -> None:
         f"#{r['id']} [{r['venue_fit'] or 'unset'}] {clip(r['notes'], 60)}" for r in unbuilt_refs
     ]
 
+    unbuilt_post_refs = conn.execute(
+        "SELECT id, notes FROM post_refs WHERE idea_id IS NULL ORDER BY id DESC LIMIT 5"
+    ).fetchall()
+    out["unbuilt_post_refs"] = [f"#{r['id']} {clip(r['notes'], 60)}" for r in unbuilt_post_refs]
+
     print(json.dumps(out, separators=(",", ":"), ensure_ascii=False))
 
 
@@ -308,6 +315,40 @@ def link_reel_ref(args) -> None:
     conn.execute("UPDATE reel_refs SET idea_id = ? WHERE id = ?", (args.idea_id, args.id))
     conn.commit()
     print(f"Linked reel_ref {args.id} -> idea {args.idea_id}")
+
+
+def add_post_ref(args) -> None:
+    conn = connect()
+    cur = conn.execute(
+        "INSERT INTO post_refs (source_url, file_name, notes) VALUES (?, ?, ?)",
+        (args.source_url, args.file_name, args.notes),
+    )
+    conn.commit()
+    print(f"Added post_ref id={cur.lastrowid}")
+
+
+def get_post_ref(args) -> None:
+    conn = connect()
+    row = conn.execute("SELECT * FROM post_refs WHERE id = ?", (args.id,)).fetchone()
+    if not row:
+        raise SystemExit(f"No post_ref with id={args.id}")
+    print(json.dumps(dict(row), separators=(",", ":"), ensure_ascii=False))
+
+
+def list_post_refs(args) -> None:
+    conn = connect()
+    query = "SELECT * FROM post_refs"
+    if args.unbuilt:
+        query += " WHERE idea_id IS NULL"
+    query += " ORDER BY id DESC"
+    print_rows(conn.execute(query).fetchall())
+
+
+def link_post_ref(args) -> None:
+    conn = connect()
+    conn.execute("UPDATE post_refs SET idea_id = ? WHERE id = ?", (args.idea_id, args.id))
+    conn.commit()
+    print(f"Linked post_ref {args.id} -> idea {args.idea_id}")
 
 
 def list_briefs(args) -> None:
@@ -431,6 +472,25 @@ def build_parser() -> argparse.ArgumentParser:
     lkr.add_argument("--id", required=True, type=int)
     lkr.add_argument("--idea-id", required=True, type=int)
     lkr.set_defaults(func=link_reel_ref)
+
+    ap_ = sub.add_parser("add-post-ref", help="log a reference post structure (app uses this directly; agents shouldn't need it)")
+    ap_.add_argument("--source-url")
+    ap_.add_argument("--file-name")
+    ap_.add_argument("--notes", required=True, help="the structure to copy - not a caption, the layout/mechanic")
+    ap_.set_defaults(func=add_post_ref)
+
+    gp = sub.add_parser("get-post-ref", help="read one reference post's notes/url")
+    gp.add_argument("--id", required=True, type=int)
+    gp.set_defaults(func=get_post_ref)
+
+    lp = sub.add_parser("list-post-refs")
+    lp.add_argument("--unbuilt", action="store_true", help="only references with no idea built from them yet")
+    lp.set_defaults(func=list_post_refs)
+
+    lkp = sub.add_parser("link-post-ref", help="attach a reference post to the idea built from it")
+    lkp.add_argument("--id", required=True, type=int)
+    lkp.add_argument("--idea-id", required=True, type=int)
+    lkp.set_defaults(func=link_post_ref)
 
     return p
 

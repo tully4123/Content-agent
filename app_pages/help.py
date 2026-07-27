@@ -54,6 +54,11 @@ with st.expander("Post builder - rough idea in, finished carousel out"):
   hit build. You get the full PubCam-layout carousel: SAVE-THIS hook
   cover, one item per slide, the screenshot-and-send payoff slide, outro,
   and a caption draft.
+- Want a different layout? Open "Copy a specific post structure", drop in
+  an example post (image and/or link) and describe the structure - a Q&A,
+  a ranked countdown, a this-or-that, whatever it is - and it builds to
+  that instead. The agent never analyses the image, only your
+  description, so be specific. Leave it empty for the proven default.
 - It lands in Ideas (backlog) with the brief attached; approve it there
   to queue it for scheduling.
 - Unverifiable facts come back as [CHECK] items - tick them off before

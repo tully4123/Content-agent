@@ -19,6 +19,11 @@ reference_reels/*
 !reference_reels/.gitkeep
 !reference_reels/README.md
 
+# saved reference post images - same treatment
+reference_posts/*
+!reference_posts/.gitkeep
+!reference_posts/README.md
+
 # machine-local symlinks into the pip-installed streamlit package
 .agents/
 .claude/skills/developing-with-streamlit

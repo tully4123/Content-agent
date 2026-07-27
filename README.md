@@ -20,10 +20,13 @@ What it does today:
   last posts performed. Includes an in-app **Chat** with the agent.
 - **Post builder** — type a rough idea ("cheapest parmas in the gong") and
   get a complete carousel in the proven PubCam layout: SAVE-THIS hook cover,
-  one item per slide, screenshot-and-send payoff slide, caption. One click
-  renders it as actual PNGs in PubCam's real carousel style (photo, dark
-  scrim, script signature) — drawing from a venue photo library
-  (`assets/venue_photos/`) that auto-matches the right shot per slide.
+  one item per slide, screenshot-and-send payoff slide, caption. Want a
+  different layout instead? Drop in a reference post (image and/or link)
+  and describe its structure — a Q&A, a ranked countdown, whatever it is —
+  and it builds to that instead of the default. One click renders it as
+  actual PNGs in PubCam's real carousel style (photo, dark scrim, script
+  signature) — drawing from a venue photo library (`assets/venue_photos/`)
+  that auto-matches the right shot per slide.
 - **Reel builder** — drop in a reference reel (video and/or link) plus a
   note on what to copy (hook, pacing, a specific mechanic) and get back a
   PubCam-branded script in that style. No vision step — it works from your
@@ -58,7 +61,9 @@ Built:
   posts, Ideas (approve → auto-brief), Trends, Schedule, Agent buttons,
   Dashboard (trend lines + live insights), Strategy log, built-in help,
   and Smeaton the mascot with page-aware tips
-- `build-post` skill — one-shot idea → PubCam-layout carousel (idea + brief)
+- `build-post` skill — one-shot idea → PubCam-layout carousel (idea +
+  brief), or a dropped-in reference post's own structure instead of the
+  default template
 - `scripts/render_carousel.py` — brief → actual PNG carousel slides in
   PubCam's real style (photo, dark scrim, Playfair Display/Sacramento
   type, signature mark); auto-picks the right shot per venue from

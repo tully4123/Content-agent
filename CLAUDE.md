@@ -153,9 +153,12 @@ Skills (see `.claude/skills/`):
   to the `briefs` table. Triggered automatically by the app when an idea is
   approved. **Implemented.**
 - `build-post` — one-shot: rough idea in, finished PubCam-layout carousel
-  out (fixed template: SAVE-THIS hook cover, one item per slide,
+  out (default template: SAVE-THIS hook cover, one item per slide,
   screenshot-and-send payoff slide, outro, caption), saved as idea + brief
-  in a single run. Triggered by the app's Post builder page. **Implemented.**
+  in a single run. Optionally follows a dropped-in reference post's
+  structure instead of the default (see `post_refs` below) — the default
+  is a proven fallback, not a mandate. Triggered by the app's Post builder
+  page. **Implemented.**
   [scripts/render_carousel.py](scripts/render_carousel.py) then turns that
   brief into actual 1080x1350 PNG slides in PubCam's real carousel style -
   full-bleed photo, dark scrim, Playfair Display/Sacramento type, the
@@ -188,7 +191,8 @@ Weekly cadence (target, once Phase 4 automation is in place):
 
 SQLite at `db/pubcam.db`, schema in [db/schema.sql](db/schema.sql). Tables:
 `posts`, `ideas`, `schedule`, `trends`, `briefs`, `strategy_log`, `reel_refs`
-(saved reference reels for `build-reel`; links to `ideas.id` once built).
+(saved reference reels for `build-reel`), `post_refs` (saved reference post
+structures for `build-post`) — both link to `ideas.id` once built.
 Initialise/reset with `python db/init_db.py` (safe to re-run on an existing
 database — `CREATE TABLE IF NOT EXISTS` only adds what's missing).
 

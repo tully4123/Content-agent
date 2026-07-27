@@ -20,6 +20,8 @@ PHOTO_LIBRARY = REPO_ROOT / "assets" / "venue_photos"
 PHOTO_EXTS = (".jpg", ".jpeg", ".png", ".webp")
 REEL_REF_DIR = REPO_ROOT / "reference_reels"
 VIDEO_EXTS = ["mp4", "mov", "webm", "m4v"]
+POST_REF_DIR = REPO_ROOT / "reference_posts"
+IMAGE_EXTS = ["jpg", "jpeg", "png", "webp"]
 
 # Folder choices for the library uploader - the real venues (matched to
 # slides by word overlap in render_carousel.py) plus a general bucket for
@@ -186,6 +188,13 @@ REEL_PROMPT = (
     "Non-interactive (never ask questions). Save via scripts/db.py add-idea + "
     "add-brief, link it back with scripts/db.py link-reel-ref --id {ref_id} "
     "--idea-id <the new idea id>, and print the full build as your final message."
+)
+
+POST_REF_LINE = (
+    " Follow the structure from post reference id {ref_id} instead of the "
+    "default template - read its notes first with `scripts/db.py get-post-ref "
+    "--id {ref_id}`, then link it back afterward with `scripts/db.py "
+    "link-post-ref --id {ref_id} --idea-id <the new idea id>`."
 )
 
 AGENT_ACTIONS = {
@@ -420,6 +429,51 @@ def delete_reel_reference(ref_id: int) -> None:
         shutil.rmtree(d)
 
 
+def save_post_reference(source_url: str, notes: str, uploaded_file) -> int:
+    """Log a reference post structure (Post builder's 'copy a specific
+    structure' section) and, if an image was attached, save it under
+    reference_posts/<id>/. Returns the new post_refs id."""
+    conn = sqlite3.connect(DB_PATH)
+    try:
+        cur = conn.execute(
+            "INSERT INTO post_refs (source_url, file_name, notes) VALUES (?, ?, ?)",
+            (source_url or None, uploaded_file.name if uploaded_file else None, notes),
+        )
+        conn.commit()
+        ref_id = cur.lastrowid
+    finally:
+        conn.close()
+    if uploaded_file:
+        dest_dir = POST_REF_DIR / str(ref_id)
+        dest_dir.mkdir(parents=True, exist_ok=True)
+        (dest_dir / Path(uploaded_file.name).name).write_bytes(uploaded_file.getbuffer())
+    return ref_id
+
+
+def list_post_references() -> pd.DataFrame:
+    return query(
+        "SELECT post_refs.*, ideas.title AS idea_title, ideas.status AS idea_status,"
+        " EXISTS(SELECT 1 FROM briefs WHERE briefs.idea_id = post_refs.idea_id) AS has_brief"
+        " FROM post_refs LEFT JOIN ideas ON post_refs.idea_id = ideas.id"
+        " ORDER BY post_refs.id DESC"
+    )
+
+
+def post_reference_file(ref_id: int) -> Path | None:
+    d = POST_REF_DIR / str(ref_id)
+    if not d.exists():
+        return None
+    files = [f for f in d.iterdir() if f.is_file()]
+    return files[0] if files else None
+
+
+def delete_post_reference(ref_id: int) -> None:
+    execute("DELETE FROM post_refs WHERE id = ?", (ref_id,))
+    d = POST_REF_DIR / str(ref_id)
+    if d.exists():
+        shutil.rmtree(d)
+
+
 def save_slide_override(idea_id: int, slide_number: int, uploaded_file) -> Path:
     """Save an exact photo for one slide of one build - takes priority over
     the shared library for that slide (see render_carousel.py's photo
@@ -457,6 +511,7 @@ SMEATON_TIPS = {
         "Flip on High quality mode for builds you'll actually shoot - the hooks come out sharper.",
         "Hit 'Render carousel images' and I'll draw every slide as an actual PNG - PubCam's real photo-and-signature style, free and instant, no agent call needed.",
         "Drop venue photos into assets/venue_photos/ and I'll pick the right one for each slide automatically - no photo yet, no worries, it renders on a placeholder until one turns up.",
+        "Want a different structure than the usual SAVE-THIS layout? Open 'Copy a specific post structure', drop in an example and describe it (a Q&A, a countdown, whatever it is) - I'll build to that instead. Leave it empty for the proven default.",
     ],
     "Reel builder": [
         "Drop in a video and write what you actually want copied - the hook, the pacing, a specific mechanic. I never watch the file, only your note, so the more specific it is the closer the script lands.",

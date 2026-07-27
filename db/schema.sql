@@ -76,3 +76,12 @@ CREATE TABLE IF NOT EXISTS reel_refs (
     notes       TEXT NOT NULL,
     idea_id     INTEGER REFERENCES ideas(id)
 );
+
+CREATE TABLE IF NOT EXISTS post_refs (
+    id          INTEGER PRIMARY KEY AUTOINCREMENT,
+    created_at  TEXT NOT NULL DEFAULT (datetime('now')),
+    source_url  TEXT,
+    file_name   TEXT,
+    notes       TEXT NOT NULL,
+    idea_id     INTEGER REFERENCES ideas(id)
+);
