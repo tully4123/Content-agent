@@ -57,6 +57,16 @@ TODO — paste the existing PubCam voice guidelines here. Until this is filled i
 do not generate final captions/copy from scratch; draft options and flag them as
 voice-unverified.
 
+**Interim grounding, until real guidelines land:** don't invent a tone from
+nothing — `python scripts/db.py voice-sample` returns full, unclipped
+captions from PubCam's actual top-scoring posts (the `digest` command's
+captions are clipped to ~50 chars for token economy, too short to learn a
+voice from). Read the real patterns — opening line style, emoji density,
+sign-off, hashtag placement — and match them when drafting a caption or
+suggesting a post. This is grounding in real performance data, not a
+substitute for the real guidelines; still mark drafted copy as
+voice-unverified per above.
+
 ## 3. What works (living section)
 
 This section is the agent's running memory of validated strategy. Update it only

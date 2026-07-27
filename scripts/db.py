@@ -20,6 +20,7 @@ Usage examples:
     python scripts/db.py link-reel-ref --id 1 --idea-id 9
     python scripts/db.py get-post-ref --id 1
     python scripts/db.py link-post-ref --id 1 --idea-id 10
+    python scripts/db.py voice-sample --limit 6
 """
 import argparse
 import json
@@ -156,6 +157,22 @@ def top_posts(args) -> None:
 
 def bottom_posts(args) -> None:
     _posts_query(args, "ASC")
+
+
+def voice_sample(args) -> None:
+    """Full, unclipped captions from the top-scoring posts - grounding for
+    voice/style questions. digest and top-posts clip captions for token
+    economy, too short to actually learn a tone from; this doesn't clip."""
+    conn = connect()
+    query = f"SELECT {POST_COLS} FROM posts WHERE percentile IS NOT NULL"
+    params = []
+    if args.format:
+        query += " AND format = ?"
+        params.append(args.format)
+    query += " ORDER BY percentile DESC LIMIT ?"
+    params.append(args.limit)
+    rows = [dict(r) for r in conn.execute(query, params).fetchall()]
+    print(json.dumps(rows, separators=(",", ":"), ensure_ascii=False))
 
 
 def digest(args) -> None:
@@ -420,6 +437,11 @@ def build_parser() -> argparse.ArgumentParser:
     bp.add_argument("--limit", type=int, default=5)
     bp.add_argument("--full", action="store_true", help="longer captions (default is clipped to save tokens)")
     bp.set_defaults(func=bottom_posts)
+
+    vs = sub.add_parser("voice-sample", help="full unclipped captions from top-scoring posts - grounding for voice/style questions")
+    vs.add_argument("--format")
+    vs.add_argument("--limit", type=int, default=6)
+    vs.set_defaults(func=voice_sample)
 
     dg = sub.add_parser("digest", help="compact one-shot snapshot of posts/ideas/trends/schedule - agents should start here")
     dg.set_defaults(func=digest)

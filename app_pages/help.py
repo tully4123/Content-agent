@@ -42,6 +42,10 @@ with st.expander("Chat - talk to the agent"):
         """
 - Ask anything about your data ("which venue converts followers best?") or
   tell it to do things ("generate 3 reel ideas for Heyday").
+- Ask about PubCam's posting style or a caption and it grounds the answer
+  in real top-performing captions (`scripts/db.py voice-sample`), not a
+  guess - CLAUDE.md Section 2 is still a TODO for the real guidelines, so
+  this is the honest stand-in until then.
 - It reads and writes the same database as everything else. Replies can take
   a couple of minutes when it has to dig.
 - It won't approve ideas or commit schedules - those stay yours.
