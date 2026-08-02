@@ -52,18 +52,19 @@ items, never guesses; and the app, chat, and terminal all share one database,
 so they never disagree.
 
 Start here: [CLAUDE.md](CLAUDE.md) — the agent's brain (brand voice, venues,
-scoring model, rules, workflow definitions). [ops/notes.md](ops/notes.md) is
-where Notion content and freeform marketing notes live now that Notion's
-being retired — CLAUDE.md reads it as real context, same as the Drive
-sheets, so it's worth keeping current.
+scoring model, rules, workflow definitions). The app's **Notes** page
+([ops/notes/](ops/notes/)) is where Notion content and freeform marketing
+notes live now that Notion's being retired — CLAUDE.md reads every note as
+real context, same as the Drive sheets, so it's worth keeping current.
 
 ## Status: v1.0.1+ — full daily-driver loop
 
 Built:
-- Streamlit app as the primary interface: Home, Chat, Post builder, Score
-  posts, Ideas (approve → auto-brief), Trends, Schedule, Agent buttons,
-  Dashboard (trend lines + live insights), Strategy log, built-in help,
-  and Smeaton the mascot with page-aware tips
+- Streamlit app as the primary interface: Home, Chat, Post builder, Reel
+  builder, Score posts, Ideas (approve → auto-brief), Trends, Schedule,
+  Agent buttons, Dashboard (trend lines + live insights), Strategy log,
+  Notes (Notion-style knowledge base, `ops/notes/`), built-in help, and
+  Smeaton the mascot with page-aware tips
 - `build-post` skill — one-shot idea → PubCam-layout carousel (idea +
   brief), or a dropped-in reference post's own structure instead of the
   default template

@@ -132,6 +132,17 @@ with st.expander("Schedule - what's going out and when"):
     )
 with st.expander("Strategy log - what we believe and why"):
     st.markdown("- Decisions with evidence. The form refuses hunches.")
+with st.expander("Notes - the knowledge base (Notion is retiring)"):
+    st.markdown(
+        """
+- Freeform notes - venue info, ported Notion pages, half-formed ideas.
+  Create, tag, search, and edit from this page, or open the files in
+  `ops/notes/` by hand - it's the exact same files either way.
+- This isn't decoration - CLAUDE.md reads every note as real context,
+  same trust level as the Google Drive sheets. Write it here, the agent
+  actually uses it.
+"""
+    )
 with st.expander("Agent - one-click agent runs"):
     st.markdown(
         """

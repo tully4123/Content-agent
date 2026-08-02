@@ -28,6 +28,7 @@ page = st.navigation({
     "Understand": [
         st.Page("app_pages/dashboard.py", title="Dashboard", icon=":material/analytics:"),
         st.Page("app_pages/strategy.py", title="Strategy log", icon=":material/history_edu:"),
+        st.Page("app_pages/notes.py", title="Notes", icon=":material/sticky_note_2:"),
         st.Page("app_pages/help.py", title="How to use", icon=":material/help:"),
     ],
 })

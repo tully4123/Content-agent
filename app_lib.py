@@ -1,5 +1,7 @@
 """Shared plumbing for the PubCam app: db access, palette, agent runner, Smeaton."""
+import datetime as dt
 import json
+import re
 import shutil
 import sqlite3
 import subprocess
@@ -22,6 +24,7 @@ REEL_REF_DIR = REPO_ROOT / "reference_reels"
 VIDEO_EXTS = ["mp4", "mov", "webm", "m4v"]
 POST_REF_DIR = REPO_ROOT / "reference_posts"
 IMAGE_EXTS = ["jpg", "jpeg", "png", "webp"]
+NOTES_DIR = REPO_ROOT / "ops" / "notes"
 
 # Folder choices for the library uploader - the real venues (matched to
 # slides by word overlap in render_carousel.py) plus a general bucket for
@@ -531,6 +534,97 @@ def save_slide_override(idea_id: int, slide_number: int, uploaded_file) -> Path:
     return dest
 
 
+# ---------------------------------------------------------------- notes
+#
+# One markdown file per note, in ops/notes/ - plain "# Title" then an
+# optional "Tags: a, b" line then freeform body. No sidecar index; title,
+# tags, and last-edited all come straight from the file itself (mtime for
+# the date), so the files stay the single source of truth whether you edit
+# them here in the app or by hand.
+
+def _slugify(text: str) -> str:
+    slug = re.sub(r"[^a-z0-9]+", "-", text.lower()).strip("-")
+    return slug[:60] or "note"
+
+
+def _parse_note(path: Path) -> dict:
+    lines = path.read_text(encoding="utf-8").splitlines()
+    title = path.stem.replace("-", " ").title()
+    body_start = 0
+    if lines and lines[0].startswith("# "):
+        title = lines[0][2:].strip()
+        body_start = 1
+
+    i = body_start
+    while i < len(lines) and lines[i].strip() == "":
+        i += 1
+    tags: list[str] = []
+    if i < len(lines) and lines[i].lower().startswith("tags:"):
+        tags = [t.strip() for t in lines[i].split(":", 1)[1].split(",") if t.strip()]
+        body_start = i + 1
+
+    body = "\n".join(lines[body_start:]).strip("\n")
+    return {
+        "filename": path.name,
+        "title": title,
+        "tags": tags,
+        "body": body,
+        "updated_at": dt.datetime.fromtimestamp(path.stat().st_mtime),
+    }
+
+
+def list_notes(query_text: str = "", tag: str | None = None) -> list[dict]:
+    NOTES_DIR.mkdir(parents=True, exist_ok=True)
+    notes = [_parse_note(p) for p in NOTES_DIR.glob("*.md")]
+    if tag:
+        notes = [n for n in notes if tag in n["tags"]]
+    if query_text.strip():
+        q = query_text.strip().lower()
+        notes = [
+            n for n in notes
+            if q in n["title"].lower() or q in n["body"].lower() or any(q in t.lower() for t in n["tags"])
+        ]
+    notes.sort(key=lambda n: n["updated_at"], reverse=True)
+    return notes
+
+
+def get_note(filename: str) -> dict | None:
+    path = NOTES_DIR / filename
+    return _parse_note(path) if path.exists() else None
+
+
+def save_note(filename: str | None, title: str, tags: list[str], body: str) -> str:
+    """Create a note (filename=None) or overwrite an existing one. Editing
+    a title never renames the file - the filename is assigned once, at
+    creation, so nothing else that might reference it ever goes stale."""
+    NOTES_DIR.mkdir(parents=True, exist_ok=True)
+    if filename is None:
+        base = _slugify(title)
+        candidate = f"{base}.md"
+        n = 2
+        while (NOTES_DIR / candidate).exists():
+            candidate = f"{base}-{n}.md"
+            n += 1
+        filename = candidate
+    tags_line = f"Tags: {', '.join(tags)}\n\n" if tags else ""
+    content = f"# {title}\n\n{tags_line}{body.strip()}\n"
+    (NOTES_DIR / filename).write_text(content, encoding="utf-8")
+    return filename
+
+
+def delete_note(filename: str) -> None:
+    path = NOTES_DIR / filename
+    if path.exists():
+        path.unlink()
+
+
+def all_note_tags() -> list[str]:
+    tags: set[str] = set()
+    for n in list_notes():
+        tags.update(n["tags"])
+    return sorted(tags)
+
+
 # ---------------------------------------------------------------- Smeaton
 
 SMEATON_TIPS = {
@@ -593,6 +687,11 @@ SMEATON_TIPS = {
     "How to use": [
         "New here? Read the weekly routine table first - everything else hangs off it.",
         "You can ask Claude Code anything about your data in plain English - 'which venue converts followers best?' works.",
+    ],
+    "Notes": [
+        "Anything you write here, I actually read as context (CLAUDE.md) - not decoration. A note on a venue's contact or a pricing quirk shapes what I build next.",
+        "Tags are just a comma-separated line under the title - filter by one with the pills above the grid.",
+        "These are plain markdown files in ops/notes/ - open one in any text editor if you'd rather type there than in the browser. Same file either way.",
     ],
 }
 

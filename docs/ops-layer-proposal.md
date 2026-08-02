@@ -1,11 +1,11 @@
 # Marketing ops layer — proposal
 
 Status: **deferred.** What actually got built first is much smaller: a
-single freeform notes file, [ops/notes.md](../ops/notes.md), referenced
-from CLAUDE.md as a context source — a place to write notes and port over
-old Notion content, no CLI or task/performance-log machinery. Everything
-below is the fuller system, still here for if/when that's actually wanted;
-it hasn't been built.
+Notion-style notes centre — one markdown file per note under
+[ops/notes/](../ops/notes/), managed from the app's Notes page or by hand,
+referenced from CLAUDE.md as a context source. No CLI or task/performance-
+log machinery. Everything below is the fuller system, still here for
+if/when that's actually wanted; it hasn't been built.
 
 ## 0. The one decision that affects existing, working code
 

@@ -51,12 +51,14 @@ posts too, so this isn't a gap introduced by this repo.
   here before inventing event details, and never state a price/time from
   memory when this sheet (or a fresher one) has it.
 
-**Local notes ([ops/notes.md](ops/notes.md)):** freeform, human-maintained —
-venue info, ported-over Notion pages, half-formed ideas, whatever's useful
-to remember. Same trust level as the Drive sheets above: read it before
-assuming something isn't known, never assume it's stale just because it's
-plain markdown. Notion is being retired; this is where that context lands
-now. The agent reads this file, it doesn't write to it.
+**Local notes ([ops/notes/](ops/notes/)):** freeform, human-maintained —
+one markdown file per note (`# Title`, optional `Tags: a, b` line, then
+freeform body), managed from the app's Notes page or edited by hand,
+same file either way. Read every note in here as context before assuming
+something isn't known — same trust level as the Drive sheets above, never
+assume it's stale just because it's plain markdown. Notion is being
+retired; this is where that context lands now. The agent reads these
+files, it doesn't write to them.
 
 ## 2. Editorial voice
 
