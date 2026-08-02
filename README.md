@@ -52,7 +52,10 @@ items, never guesses; and the app, chat, and terminal all share one database,
 so they never disagree.
 
 Start here: [CLAUDE.md](CLAUDE.md) — the agent's brain (brand voice, venues,
-scoring model, rules, workflow definitions).
+scoring model, rules, workflow definitions). [ops/notes.md](ops/notes.md) is
+where Notion content and freeform marketing notes live now that Notion's
+being retired — CLAUDE.md reads it as real context, same as the Drive
+sheets, so it's worth keeping current.
 
 ## Status: v1.0.1+ — full daily-driver loop
 

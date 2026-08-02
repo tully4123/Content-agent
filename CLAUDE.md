@@ -51,6 +51,13 @@ posts too, so this isn't a gap introduced by this repo.
   here before inventing event details, and never state a price/time from
   memory when this sheet (or a fresher one) has it.
 
+**Local notes ([ops/notes.md](ops/notes.md)):** freeform, human-maintained —
+venue info, ported-over Notion pages, half-formed ideas, whatever's useful
+to remember. Same trust level as the Drive sheets above: read it before
+assuming something isn't known, never assume it's stale just because it's
+plain markdown. Notion is being retired; this is where that context lands
+now. The agent reads this file, it doesn't write to it.
+
 ## 2. Editorial voice
 
 TODO — paste the existing PubCam voice guidelines here. Until this is filled in,
